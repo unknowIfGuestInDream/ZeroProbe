@@ -21,7 +21,7 @@
     <licenses>
         <license>
             <name>MIT License</name>
-            <url>https://raw.githubusercontent.com/unknowIfGuestInDream/ZeroProbe/main/LICENSE</url>
+            <url>https://raw.githubusercontent.com/unknowIfGuestInDream/ZeroProbe/master/LICENSE</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -175,7 +175,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.tlcsdm.zeroprobe.ZeroProbeApplication</mainClass>
+                    <mainClass>${mainClass}</mainClass>
                 </configuration>
             </plugin>
             <plugin>

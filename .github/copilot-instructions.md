@@ -47,7 +47,7 @@ mvn test
 
 - `mvn clean verify` is the canonical CI command. Always run it before submitting changes.
 - Build output is `target/zeroprobe.jar` + `target/lib/` (all runtime deps). Both are required to run the JAR.
-- The JAR manifest entry point is `com.tlcsdm.zeroprobe.Launcher`; `mvn javafx:run` launches `ZeroProbeApplication` directly.
+- The JAR manifest entry point is `com.tlcsdm.zeroprobe.Launcher`; `mvn javafx:run` also uses `Launcher`.
 - There is no linting step beyond Java compilation (`-Xlint:-module` suppresses module-related warnings).
 
 ## Project Layout
@@ -57,7 +57,7 @@ mvn test
   CODEOWNERS                 # Code ownership assignments
   dependabot.yml             # Weekly Dependabot updates for Maven + GitHub Actions
   workflows/
-    test.yml       # CI: mvn -B clean verify on push/PR to main/master (Ubuntu, Windows, macOS)
+    test.yml       # CI: mvn -B clean verify on push/PR to master (Ubuntu, Windows, macOS)
     package.yml    # Manual: build + stage JAR/lib/scripts/JRE, uploads per-OS artifact
     release.yml    # On release created: packages per-OS ZIP and uploads to GitHub release
     app-image.yml  # Manual: build Windows app image via jpackage
@@ -118,7 +118,7 @@ src/test/java/com/tlcsdm/zeroprobe/
 
 ## CI Checks
 
-The **Test** workflow (`.github/workflows/test.yml`) runs on every push and pull request to `main`/`master`:
+The **Test** workflow (`.github/workflows/test.yml`) runs on every push and pull request to `master`:
 
 1. Checks out the code
 2. Sets up Temurin JDK 21
