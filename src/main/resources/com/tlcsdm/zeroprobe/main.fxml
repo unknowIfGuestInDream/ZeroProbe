@@ -67,6 +67,7 @@
                 <Menu text="%menu.file">
                     <MenuItem text="%menu.settings" onAction="#openSettings"/>
                     <SeparatorMenuItem/>
+                    <MenuItem text="%menu.restart" onAction="#restartApplication"/>
                     <MenuItem text="%menu.exit" onAction="#exitApplication"/>
                 </Menu>
                 <Menu text="%menu.help">
