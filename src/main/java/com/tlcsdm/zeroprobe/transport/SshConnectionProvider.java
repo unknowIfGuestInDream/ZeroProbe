@@ -21,7 +21,10 @@ public class SshConnectionProvider implements ConnectionProvider {
     private static final int CONNECT_TIMEOUT_MS = 10_000;
     private static final int COMMAND_TIMEOUT_MS = 15_000;
     private static final int BUFFER_SIZE = 4096;
+    private static final int SERVER_ALIVE_INTERVAL_MS = 30_000;
+    private static final int SERVER_ALIVE_COUNT_MAX = 3;
 
+    private final JSch jsch = new JSch();
     private Session session;
 
     @Override
@@ -30,10 +33,12 @@ public class SshConnectionProvider implements ConnectionProvider {
 
         log.info("Connecting via SSH to {}:{}", config.getHost(), config.getPort());
 
-        JSch jsch = new JSch();
         session = jsch.getSession(config.getUsername(), config.getHost(), config.getPort());
         session.setPassword(config.getPassword());
         session.setConfig("StrictHostKeyChecking", "no");
+        session.setServerAliveInterval(SERVER_ALIVE_INTERVAL_MS);
+        session.setServerAliveCountMax(SERVER_ALIVE_COUNT_MAX);
+        session.setTimeout(CONNECT_TIMEOUT_MS);
         session.connect(CONNECT_TIMEOUT_MS);
 
         log.info("SSH connection established to {}", config.getHost());
@@ -60,10 +65,16 @@ public class SshConnectionProvider implements ConnectionProvider {
             long deadline = System.currentTimeMillis() + COMMAND_TIMEOUT_MS;
             int len;
             while (true) {
-                while ((len = in.read(buf)) > 0) {
+                // Use available() to avoid blocking on read(), allowing timeout checks
+                while (in.available() > 0 && (len = in.read(buf)) > 0) {
                     output.write(buf, 0, len);
                 }
                 if (channel.isClosed()) {
+                    // Drain remaining buffered data after channel closure;
+                    // available() prevents blocking on a closed stream with no data
+                    while (in.available() > 0 && (len = in.read(buf)) > 0) {
+                        output.write(buf, 0, len);
+                    }
                     break;
                 }
                 if (System.currentTimeMillis() > deadline) {
@@ -73,11 +84,18 @@ public class SshConnectionProvider implements ConnectionProvider {
                 Thread.sleep(50);
             }
 
+            int exitStatus = channel.getExitStatus();
             String result = output.toString(StandardCharsets.UTF_8);
             String stderr = errStream.toString(StandardCharsets.UTF_8);
+
             if (!stderr.isBlank()) {
                 log.warn("Command stderr [{}]: {}", command, stderr.trim());
             }
+            // exitStatus -1 means the server did not send an exit status (e.g. channel not yet closed)
+            if (exitStatus != 0 && exitStatus != -1) {
+                log.warn("Command [{}] exited with status {}", command, exitStatus);
+            }
+
             return result;
         } finally {
             channel.disconnect();
