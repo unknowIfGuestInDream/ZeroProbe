@@ -19,6 +19,7 @@ public class SshConnectionProvider implements ConnectionProvider {
     private static final Logger log = LoggerFactory.getLogger(SshConnectionProvider.class);
 
     private static final int CONNECT_TIMEOUT_MS = 10_000;
+    private static final int SOCKET_TIMEOUT_MS = 30_000;
     private static final int COMMAND_TIMEOUT_MS = 15_000;
     private static final int BUFFER_SIZE = 4096;
     private static final int SERVER_ALIVE_INTERVAL_MS = 30_000;
@@ -38,7 +39,7 @@ public class SshConnectionProvider implements ConnectionProvider {
         session.setConfig("StrictHostKeyChecking", "no");
         session.setServerAliveInterval(SERVER_ALIVE_INTERVAL_MS);
         session.setServerAliveCountMax(SERVER_ALIVE_COUNT_MAX);
-        session.setTimeout(CONNECT_TIMEOUT_MS);
+        session.setTimeout(SOCKET_TIMEOUT_MS);
         session.connect(CONNECT_TIMEOUT_MS);
 
         log.info("SSH connection established to {}", config.getHost());
@@ -65,14 +66,20 @@ public class SshConnectionProvider implements ConnectionProvider {
             long deadline = System.currentTimeMillis() + COMMAND_TIMEOUT_MS;
             int len;
             while (true) {
-                // Use available() to avoid blocking on read(), allowing timeout checks
-                while (in.available() > 0 && (len = in.read(buf)) > 0) {
+                while (in.available() > 0) {
+                    len = in.read(buf);
+                    if (len < 0) {
+                        break;
+                    }
                     output.write(buf, 0, len);
                 }
-                if (channel.isClosed()) {
-                    // Drain remaining buffered data after channel closure;
-                    // available() prevents blocking on a closed stream with no data
-                    while (in.available() > 0 && (len = in.read(buf)) > 0) {
+                if (channel.isClosed() || channel.isEOF()) {
+                    // Drain any remaining buffered data after channel/EOF signal
+                    while (in.available() > 0) {
+                        len = in.read(buf);
+                        if (len < 0) {
+                            break;
+                        }
                         output.write(buf, 0, len);
                     }
                     break;
