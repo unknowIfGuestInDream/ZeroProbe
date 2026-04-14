@@ -44,7 +44,7 @@
         <logback-classic.version>1.5.32</logback-classic.version>
         <gson.version>2.13.2</gson.version>
         <junit.version>6.0.3</junit.version>
-        <jsch.version>0.2.24</jsch.version>
+        <jsch.version>2.28.0</jsch.version>
         <jserialcomm.version>2.11.0</jserialcomm.version>
         <mainClass>com.tlcsdm.zeroprobe.Launcher</mainClass>
     </properties>
