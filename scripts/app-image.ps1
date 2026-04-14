@@ -61,6 +61,7 @@ $jpackageArgs = @(
   '--main-jar', 'zeroprobe.jar',
   '--main-class', 'com.tlcsdm.zeroprobe.Launcher',
   '--type', 'app-image',
+  '--icon', 'scripts\logo.ico',
   '--java-options', '-Xms64m',
   '--java-options', '-Xmx256m',
   '--java-options', '-Dfile.encoding=UTF-8',

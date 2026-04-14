@@ -1,5 +1,6 @@
 package com.tlcsdm.zeroprobe.controller;
 
+import com.tlcsdm.zeroprobe.ZeroProbeApplication;
 import com.tlcsdm.zeroprobe.config.AppSettings;
 import com.tlcsdm.zeroprobe.config.I18N;
 import com.tlcsdm.zeroprobe.export.CsvDataExporter;
@@ -15,6 +16,8 @@ import com.tlcsdm.zeroprobe.transport.SshConnectionProvider;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.Cursor;
+import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -31,6 +34,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,6 +147,7 @@ public class MainController {
     private static final String TITLE_BUTTON_HOVER_STYLE = "-fx-background-color: -color-bg-default;";
     private static final String TITLE_BUTTON_CLOSE_HOVER_STYLE =
         "-fx-background-color: -color-danger-emphasis; -fx-text-fill: -color-fg-emphasis;";
+    private static final double RESIZE_MARGIN = 5;
 
     private ConnectionProvider connectionProvider;
     private MonitoringService monitoringService;
@@ -155,6 +160,14 @@ public class MainController {
     private XYChart.Series<Number, Number> memorySeries;
     private int cpuDataIndex;
     private int memoryDataIndex;
+
+    private Cursor resizeCursor = Cursor.DEFAULT;
+    private double resizeStartX;
+    private double resizeStartY;
+    private double resizeStartW;
+    private double resizeStartH;
+    private double resizeStartStageX;
+    private double resizeStartStageY;
 
     @FXML
     public void initialize() {
@@ -202,6 +215,99 @@ public class MainController {
         this.primaryStage = stage;
         this.primaryStage.maximizedProperty().addListener((obs, oldVal, newVal) -> updateMaximizeButtonText());
         updateMaximizeButtonText();
+        initResizeHandling();
+    }
+
+    private void initResizeHandling() {
+        Scene scene = primaryStage.getScene();
+        if (scene == null) {
+            return;
+        }
+
+        scene.addEventFilter(MouseEvent.MOUSE_MOVED, event -> {
+            if (primaryStage.isMaximized()) {
+                scene.setCursor(Cursor.DEFAULT);
+                return;
+            }
+            double x = event.getX();
+            double y = event.getY();
+            double w = scene.getWidth();
+            double h = scene.getHeight();
+            Cursor cursor = computeResizeCursor(x, y, w, h);
+            scene.setCursor(cursor);
+        });
+
+        scene.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (primaryStage.isMaximized()) {
+                return;
+            }
+            double x = event.getX();
+            double y = event.getY();
+            double w = scene.getWidth();
+            double h = scene.getHeight();
+            resizeCursor = computeResizeCursor(x, y, w, h);
+            if (resizeCursor != Cursor.DEFAULT) {
+                resizeStartX = event.getScreenX();
+                resizeStartY = event.getScreenY();
+                resizeStartW = primaryStage.getWidth();
+                resizeStartH = primaryStage.getHeight();
+                resizeStartStageX = primaryStage.getX();
+                resizeStartStageY = primaryStage.getY();
+                event.consume();
+            }
+        });
+
+        scene.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
+            if (resizeCursor == Cursor.DEFAULT || primaryStage.isMaximized()) {
+                return;
+            }
+            double dx = event.getScreenX() - resizeStartX;
+            double dy = event.getScreenY() - resizeStartY;
+            double minW = primaryStage.getMinWidth();
+            double minH = primaryStage.getMinHeight();
+
+            if (resizeCursor == Cursor.E_RESIZE || resizeCursor == Cursor.NE_RESIZE || resizeCursor == Cursor.SE_RESIZE) {
+                primaryStage.setWidth(Math.max(minW, resizeStartW + dx));
+            }
+            if (resizeCursor == Cursor.S_RESIZE || resizeCursor == Cursor.SE_RESIZE || resizeCursor == Cursor.SW_RESIZE) {
+                primaryStage.setHeight(Math.max(minH, resizeStartH + dy));
+            }
+            if (resizeCursor == Cursor.W_RESIZE || resizeCursor == Cursor.NW_RESIZE || resizeCursor == Cursor.SW_RESIZE) {
+                double newW = Math.max(minW, resizeStartW - dx);
+                primaryStage.setX(resizeStartStageX + resizeStartW - newW);
+                primaryStage.setWidth(newW);
+            }
+            if (resizeCursor == Cursor.N_RESIZE || resizeCursor == Cursor.NW_RESIZE || resizeCursor == Cursor.NE_RESIZE) {
+                double newH = Math.max(minH, resizeStartH - dy);
+                primaryStage.setY(resizeStartStageY + resizeStartH - newH);
+                primaryStage.setHeight(newH);
+            }
+            event.consume();
+        });
+
+        scene.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
+            if (resizeCursor != Cursor.DEFAULT) {
+                resizeCursor = Cursor.DEFAULT;
+                event.consume();
+            }
+        });
+    }
+
+    private Cursor computeResizeCursor(double x, double y, double w, double h) {
+        boolean left = x < RESIZE_MARGIN;
+        boolean right = x > w - RESIZE_MARGIN;
+        boolean top = y < RESIZE_MARGIN;
+        boolean bottom = y > h - RESIZE_MARGIN;
+
+        if (top && left) return Cursor.NW_RESIZE;
+        if (top && right) return Cursor.NE_RESIZE;
+        if (bottom && left) return Cursor.SW_RESIZE;
+        if (bottom && right) return Cursor.SE_RESIZE;
+        if (left) return Cursor.W_RESIZE;
+        if (right) return Cursor.E_RESIZE;
+        if (top) return Cursor.N_RESIZE;
+        if (bottom) return Cursor.S_RESIZE;
+        return Cursor.DEFAULT;
     }
 
     // ---- Connection handling ----
@@ -458,7 +564,26 @@ public class MainController {
      */
     @FXML
     public void openSettings() {
+        Platform.runLater(() ->
+            Window.getWindows().stream()
+                .filter(w -> w instanceof Stage s && s != primaryStage && s.isShowing())
+                .findFirst()
+                .ifPresent(w -> {
+                    Stage s = (Stage) w;
+                    s.setHeight(450);
+                    s.centerOnScreen();
+                })
+        );
         AppSettings.getInstance().getPreferencesFx().show(true);
+    }
+
+    /**
+     * Restart the application.
+     */
+    @FXML
+    public void restartApplication() {
+        shutdown();
+        ZeroProbeApplication.restart();
     }
 
     /**
@@ -538,6 +663,7 @@ public class MainController {
         alert.setTitle(I18N.get("menu.about"));
         alert.setHeaderText(I18N.get("app.title"));
         alert.setContentText(I18N.get("about.description"));
+        applyLogoToDialog(alert);
         alert.showAndWait();
     }
 
@@ -586,6 +712,13 @@ public class MainController {
         alert.setTitle(I18N.get("dialog.error.title"));
         alert.setHeaderText(header);
         alert.setContentText(content);
+        applyLogoToDialog(alert);
         alert.showAndWait();
+    }
+
+    private void applyLogoToDialog(Alert alert) {
+        if (primaryStage != null) {
+            alert.initOwner(primaryStage);
+        }
     }
 }
