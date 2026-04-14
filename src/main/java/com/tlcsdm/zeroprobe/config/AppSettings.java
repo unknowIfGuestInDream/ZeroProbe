@@ -1,10 +1,10 @@
-package com.tlcsdm.fxtemplate.config;
+package com.tlcsdm.zeroprobe.config;
 
 import com.dlsc.preferencesfx.PreferencesFx;
 import com.dlsc.preferencesfx.model.Category;
 import com.dlsc.preferencesfx.model.Group;
 import com.dlsc.preferencesfx.model.Setting;
-import com.tlcsdm.fxtemplate.model.DisplayLocale;
+import com.tlcsdm.zeroprobe.model.DisplayLocale;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;

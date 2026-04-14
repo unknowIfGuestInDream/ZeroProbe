@@ -1,4 +1,4 @@
-package com.tlcsdm.fxtemplate.model;
+package com.tlcsdm.zeroprobe.model;
 
 import java.util.Locale;
 import java.util.Map;

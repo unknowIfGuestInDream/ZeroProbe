@@ -51,7 +51,7 @@ fi
 
 rm -rf staging
 mkdir -p staging
-cp target/javafx-tool-template.jar staging/
+cp target/zeroprobe.jar staging/
 cp -r target/lib staging/
 cp README.md LICENSE staging/
 cp "scripts/${platform}"/* staging/

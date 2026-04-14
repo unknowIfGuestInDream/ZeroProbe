@@ -1,8 +1,8 @@
-package com.tlcsdm.fxtemplate;
+package com.tlcsdm.zeroprobe;
 
-import com.tlcsdm.fxtemplate.config.AppSettings;
-import com.tlcsdm.fxtemplate.config.I18N;
-import com.tlcsdm.fxtemplate.controller.MainController;
+import com.tlcsdm.zeroprobe.config.AppSettings;
+import com.tlcsdm.zeroprobe.config.I18N;
+import com.tlcsdm.zeroprobe.controller.MainController;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -16,11 +16,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 /**
- * Main JavaFX Application for the template tool.
+ * Main JavaFX Application for ZeroProbe.
  */
-public class TemplateApplication extends Application {
+public class ZeroProbeApplication extends Application {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TemplateApplication.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ZeroProbeApplication.class);
 
     private MainController controller;
 

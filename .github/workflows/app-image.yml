@@ -40,6 +40,6 @@ jobs:
       - name: Upload app image artifact
         uses: actions/upload-artifact@v7
         with:
-          name: javafx-tool-template-app-image-windows
-          path: dist/javafx-tool-template-app-image-windows-${{ env.APP_VERSION }}.zip
+          name: zeroprobe-app-image-windows
+          path: dist/zeroprobe-app-image-windows-${{ env.APP_VERSION }}.zip
           retention-days: 7

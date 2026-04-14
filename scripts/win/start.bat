@@ -16,6 +16,6 @@ if not %errorlevel% == 0 (
 set java_path=javaw
 )
 :START
-cmd /c start /b %java_path% -jar javafx-tool-template.jar
+cmd /c start /b %java_path% -jar zeroprobe.jar
 
 :END

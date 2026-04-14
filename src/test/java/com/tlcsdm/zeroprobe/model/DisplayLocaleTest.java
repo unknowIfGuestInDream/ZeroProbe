@@ -1,4 +1,4 @@
-package com.tlcsdm.fxtemplate.model;
+package com.tlcsdm.zeroprobe.model;
 
 import org.junit.jupiter.api.Test;
 

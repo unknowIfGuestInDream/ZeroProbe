@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.tlcsdm</groupId>
-    <artifactId>javafx-tool-template</artifactId>
+    <artifactId>zeroprobe</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>JavaFX Tool Template</name>
-    <description>A template repository for JavaFX tool development with i18n, theme, and preferences support</description>
-    <url>https://github.com/unknowIfGuestInDream/javafx-tool-template</url>
+    <name>ZeroProbe</name>
+    <description>An embedded device monitoring tool for real-time data acquisition and visualization</description>
+    <url>https://github.com/unknowIfGuestInDream/ZeroProbe</url>
 
     <organization>
         <name>Tlcsdm</name>
@@ -21,14 +21,14 @@
     <licenses>
         <license>
             <name>MIT License</name>
-            <url>https://raw.githubusercontent.com/unknowIfGuestInDream/javafx-tool-template/main/LICENSE</url>
+            <url>https://raw.githubusercontent.com/unknowIfGuestInDream/ZeroProbe/master/LICENSE</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
 
     <issueManagement>
         <system>GitHub Issues</system>
-        <url>https://github.com/unknowIfGuestInDream/javafx-tool-template/issues</url>
+        <url>https://github.com/unknowIfGuestInDream/ZeroProbe/issues</url>
     </issueManagement>
 
     <properties>
@@ -44,7 +44,9 @@
         <logback-classic.version>1.5.32</logback-classic.version>
         <gson.version>2.13.2</gson.version>
         <junit.version>6.0.3</junit.version>
-        <mainClass>com.tlcsdm.fxtemplate.Launcher</mainClass>
+        <jsch.version>0.2.24</jsch.version>
+        <jserialcomm.version>2.11.0</jserialcomm.version>
+        <mainClass>com.tlcsdm.zeroprobe.Launcher</mainClass>
     </properties>
 
     <dependencies>
@@ -130,6 +132,20 @@
             <version>${atlantafx.version}</version>
         </dependency>
 
+        <!-- SSH/SFTP support -->
+        <dependency>
+            <groupId>com.github.mwiede</groupId>
+            <artifactId>jsch</artifactId>
+            <version>${jsch.version}</version>
+        </dependency>
+
+        <!-- Serial port communication -->
+        <dependency>
+            <groupId>com.fazecast</groupId>
+            <artifactId>jSerialComm</artifactId>
+            <version>${jserialcomm.version}</version>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -140,7 +156,7 @@
     </dependencies>
 
     <build>
-        <finalName>javafx-tool-template</finalName>
+        <finalName>zeroprobe</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -159,7 +175,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.tlcsdm.fxtemplate.TemplateApplication</mainClass>
+                    <mainClass>${mainClass}</mainClass>
                 </configuration>
             </plugin>
             <plugin>
