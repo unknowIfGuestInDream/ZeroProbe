@@ -1,4 +1,4 @@
-package com.tlcsdm.fxtemplate.config;
+package com.tlcsdm.zeroprobe.config;
 
 import org.junit.jupiter.api.Test;
 

@@ -1,4 +1,4 @@
-package com.tlcsdm.fxtemplate;
+package com.tlcsdm.zeroprobe;
 
 /**
  * Launcher class for the application.
@@ -9,6 +9,6 @@ package com.tlcsdm.fxtemplate;
 public class Launcher {
 
     public static void main(String[] args) {
-        TemplateApplication.main(args);
+        ZeroProbeApplication.main(args);
     }
 }

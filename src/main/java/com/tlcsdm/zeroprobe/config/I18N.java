@@ -1,4 +1,4 @@
-package com.tlcsdm.fxtemplate.config;
+package com.tlcsdm.zeroprobe.config;
 
 import java.text.MessageFormat;
 import java.util.Locale;
@@ -12,7 +12,7 @@ import java.util.prefs.Preferences;
  */
 public class I18N {
 
-    private static final String BUNDLE_NAME = "com.tlcsdm.fxtemplate.i18n.messages";
+    private static final String BUNDLE_NAME = "com.tlcsdm.zeroprobe.i18n.messages";
     private static final String PREF_KEY_LANGUAGE = "language";
     private static final Preferences PREFS = Preferences.userNodeForPackage(I18N.class);
 

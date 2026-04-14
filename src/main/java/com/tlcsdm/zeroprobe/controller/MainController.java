@@ -1,7 +1,7 @@
-package com.tlcsdm.fxtemplate.controller;
+package com.tlcsdm.zeroprobe.controller;
 
-import com.tlcsdm.fxtemplate.config.AppSettings;
-import com.tlcsdm.fxtemplate.config.I18N;
+import com.tlcsdm.zeroprobe.config.AppSettings;
+import com.tlcsdm.zeroprobe.config.I18N;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Main controller for the template application.
+ * Main controller for the ZeroProbe application.
  */
 public class MainController {
 
