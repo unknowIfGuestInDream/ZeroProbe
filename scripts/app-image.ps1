@@ -41,8 +41,8 @@ if ($env:GITHUB_ENV) {
   Add-Content -Path $env:GITHUB_ENV -Value "APP_VERSION=$version" -Encoding utf8
 }
 
-$jarPath = 'target\javafx-tool-template.jar'
-if (-not (Test-Path $jarPath)) { throw 'JAR not found at target\javafx-tool-template.jar' }
+$jarPath = 'target\zeroprobe.jar'
+if (-not (Test-Path $jarPath)) { throw 'JAR not found at target\zeroprobe.jar' }
 
 $jpackageInput = 'jpackage-input'
 if (Test-Path $jpackageInput) { Remove-Item -Path $jpackageInput -Recurse -Force }
@@ -57,9 +57,9 @@ if (Test-Path $appImageDir) { Remove-Item -Path $appImageDir -Recurse -Force }
 
 $jpackageArgs = @(
   '--input', $jpackageInput,
-  '--name', 'javafx-tool-template',
-  '--main-jar', 'javafx-tool-template.jar',
-  '--main-class', 'com.tlcsdm.fxtemplate.Launcher',
+  '--name', 'zeroprobe',
+  '--main-jar', 'zeroprobe.jar',
+  '--main-class', 'com.tlcsdm.zeroprobe.Launcher',
   '--type', 'app-image',
   '--java-options', '-Xms64m',
   '--java-options', '-Xmx256m',
@@ -68,7 +68,7 @@ $jpackageArgs = @(
   '--jlink-options', '--strip-debug --no-man-pages --no-header-files --compress zip-6',
   '--app-version', $version,
   '--vendor', 'Tlcsdm',
-  '--description', 'JavaFX tool template application',
+  '--description', 'ZeroProbe - Embedded device monitoring tool',
   '--dest', $appImageDir
 )
 
@@ -78,7 +78,7 @@ if ($LASTEXITCODE -ne 0) { throw "jpackage failed with exit code $LASTEXITCODE" 
 $appDir = Get-ChildItem -Path $appImageDir -Directory | Select-Object -First 1
 if ($null -eq $appDir) { throw 'No output directory found after jpackage' }
 
-$zipName = "javafx-tool-template-app-image-windows-$version.zip"
+$zipName = "zeroprobe-app-image-windows-$version.zip"
 $zipPath = Join-Path 'dist' $zipName
 if (Test-Path $zipPath) { Remove-Item -Path $zipPath -Force }
 

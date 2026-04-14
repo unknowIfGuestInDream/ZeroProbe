@@ -16,6 +16,6 @@ if not %errorlevel% == 0 (
 set java_path=java
 )
 :START
-%java_path% -jar javafx-tool-template.jar
+%java_path% -jar zeroprobe.jar
 
 :END

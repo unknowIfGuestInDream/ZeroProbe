@@ -39,7 +39,7 @@ $stagingDir = 'staging'
 if (Test-Path $stagingDir) { Remove-Item -Path $stagingDir -Recurse -Force }
 New-Item -ItemType Directory -Path $stagingDir | Out-Null
 
-Copy-Item -Path 'target\javafx-tool-template.jar' -Destination $stagingDir
+Copy-Item -Path 'target\zeroprobe.jar' -Destination $stagingDir
 Copy-Item -Path 'target\lib' -Destination $stagingDir -Recurse
 Copy-Item -Path 'README.md' -Destination $stagingDir
 Copy-Item -Path 'LICENSE' -Destination $stagingDir

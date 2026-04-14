@@ -50,8 +50,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path 'staging\*' -DestinationPath "dist/javafx-tool-template-windows-$env:APP_VERSION.zip" -Force
-          Write-Host "Created dist/javafx-tool-template-windows-$env:APP_VERSION.zip"
+          Compress-Archive -Path 'staging\*' -DestinationPath "dist/zeroprobe-windows-$env:APP_VERSION.zip" -Force
+          Write-Host "Created dist/zeroprobe-windows-$env:APP_VERSION.zip"
           Remove-Item -Path 'staging' -Recurse -Force
 
       - name: Package with script (Linux)
@@ -64,9 +64,9 @@ jobs:
         shell: bash
         run: |
           cd staging
-          zip -r "../dist/javafx-tool-template-linux-${APP_VERSION}.zip" .
+          zip -r "../dist/zeroprobe-linux-${APP_VERSION}.zip" .
           cd ..
-          echo "Created dist/javafx-tool-template-linux-${APP_VERSION}.zip"
+          echo "Created dist/zeroprobe-linux-${APP_VERSION}.zip"
           rm -rf staging
 
       - name: Package with script (macOS)
@@ -79,9 +79,9 @@ jobs:
         shell: bash
         run: |
           cd staging
-          zip -r "../dist/javafx-tool-template-macos-${APP_VERSION}.zip" .
+          zip -r "../dist/zeroprobe-macos-${APP_VERSION}.zip" .
           cd ..
-          echo "Created dist/javafx-tool-template-macos-${APP_VERSION}.zip"
+          echo "Created dist/zeroprobe-macos-${APP_VERSION}.zip"
           rm -rf staging
 
       - name: Upload Release Assets

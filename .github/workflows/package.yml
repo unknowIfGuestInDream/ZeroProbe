@@ -54,6 +54,6 @@ jobs:
       - name: Upload packaged artifact
         uses: actions/upload-artifact@v7
         with:
-          name: javafx-tool-template-${{ matrix.os }}
+          name: zeroprobe-${{ matrix.os }}
           path: staging/
           retention-days: 7
