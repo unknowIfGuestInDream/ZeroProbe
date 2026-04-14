@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -66,13 +77,154 @@
     </top>
 
     <center>
-        <VBox alignment="CENTER" spacing="20">
-            <padding>
-                <Insets top="20" right="20" bottom="20" left="20"/>
-            </padding>
-            <Label text="%app.title" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
-            <Label text="%about.description" wrapText="true" style="-fx-font-size: 14px;"/>
-        </VBox>
+        <TabPane fx:id="mainTabPane" tabClosingPolicy="UNAVAILABLE">
+            <!-- Connection Tab -->
+            <Tab text="%tab.connection" closable="false">
+                <VBox spacing="15">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+
+                    <!-- Connection type selection -->
+                    <HBox spacing="20" alignment="CENTER_LEFT">
+                        <fx:define>
+                            <ToggleGroup fx:id="connectionTypeGroup"/>
+                        </fx:define>
+                        <Label text="%connection.type" style="-fx-font-weight: bold;"/>
+                        <RadioButton fx:id="sshRadio" text="%connection.ssh" toggleGroup="$connectionTypeGroup" selected="true"/>
+                        <RadioButton fx:id="serialRadio" text="%connection.serial" toggleGroup="$connectionTypeGroup"/>
+                    </HBox>
+
+                    <!-- SSH fields -->
+                    <VBox fx:id="sshFieldsPane" spacing="10">
+                        <GridPane hgap="10" vgap="10">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="100" prefWidth="120"/>
+                                <ColumnConstraints hgrow="ALWAYS" prefWidth="300"/>
+                            </columnConstraints>
+                            <Label text="%connection.host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="hostField" promptText="192.168.1.100" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="%connection.port" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="portField" text="22" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="%connection.username" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <TextField fx:id="usernameField" text="root" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <Label text="%connection.password" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                            <PasswordField fx:id="passwordField" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        </GridPane>
+                    </VBox>
+
+                    <!-- Serial fields -->
+                    <VBox fx:id="serialFieldsPane" spacing="10" visible="false" managed="false">
+                        <GridPane hgap="10" vgap="10">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="100" prefWidth="120"/>
+                                <ColumnConstraints hgrow="ALWAYS" prefWidth="300"/>
+                            </columnConstraints>
+                            <Label text="%connection.serialPort" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="serialPortCombo" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="%connection.baudRate" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="baudRateCombo" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        </GridPane>
+                    </VBox>
+
+                    <!-- Connect / Disconnect buttons -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="connectButton" text="%connection.connect" onAction="#onConnect"/>
+                        <Button fx:id="disconnectButton" text="%connection.disconnect" onAction="#onDisconnect" disable="true"/>
+                    </HBox>
+
+                    <!-- Connection status -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="%connection.status" style="-fx-font-weight: bold;"/>
+                        <Label fx:id="connectionStatusLabel" text="%connection.status.disconnected"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+
+            <!-- Monitor Tab -->
+            <Tab text="%tab.monitor" closable="false">
+                <VBox spacing="10">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <HBox spacing="10" HBox.hgrow="ALWAYS">
+                        <LineChart fx:id="cpuChart" title="%monitor.cpuChart" HBox.hgrow="ALWAYS" prefHeight="400">
+                            <xAxis>
+                                <NumberAxis fx:id="cpuTimeAxis" label="%monitor.timeAxis" autoRanging="true"/>
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis fx:id="cpuUsageAxis" label="%monitor.usageAxis" lowerBound="0" upperBound="100" autoRanging="false"/>
+                            </yAxis>
+                        </LineChart>
+                        <LineChart fx:id="memoryChart" title="%monitor.memoryChart" HBox.hgrow="ALWAYS" prefHeight="400">
+                            <xAxis>
+                                <NumberAxis fx:id="memoryTimeAxis" label="%monitor.timeAxis" autoRanging="true"/>
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis fx:id="memoryUsageAxis" label="%monitor.usageAxis" lowerBound="0" upperBound="100" autoRanging="false"/>
+                            </yAxis>
+                        </LineChart>
+                    </HBox>
+                    <HBox spacing="30" alignment="CENTER_LEFT">
+                        <Label fx:id="currentCpuLabel" text="%monitor.noData"/>
+                        <Label fx:id="currentMemoryLabel" text="%monitor.noData"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+
+            <!-- Process Tab -->
+            <Tab text="%tab.process" closable="false">
+                <VBox spacing="15">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="%process.pid"/>
+                        <TextField fx:id="pidField" prefWidth="120" promptText="PID"/>
+                        <Button fx:id="monitorProcessButton" text="%process.monitor" onAction="#onMonitorProcess"/>
+                    </HBox>
+                    <GridPane fx:id="processDetailsGrid" hgap="10" vgap="10">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="120" prefWidth="150"/>
+                            <ColumnConstraints hgrow="ALWAYS" prefWidth="300"/>
+                        </columnConstraints>
+                        <Label text="%process.name" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label fx:id="processNameLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="%process.state" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Label fx:id="processStateLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="%process.threads" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <Label fx:id="processThreadsLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="%process.vmrss" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <Label fx:id="processVmRssLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        <Label text="%process.cpuTime" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <Label fx:id="processCpuTimeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                    </GridPane>
+                </VBox>
+            </Tab>
+
+            <!-- Recording Tab -->
+            <Tab text="%tab.recording" closable="false">
+                <VBox spacing="15">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="%recording.saveTo"/>
+                        <TextField fx:id="recordingPathField" HBox.hgrow="ALWAYS" promptText="/path/to/output"/>
+                        <Button text="%recording.browse" onAction="#onBrowsePath"/>
+                    </HBox>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="startRecordingButton" text="%recording.start" onAction="#onStartRecording"/>
+                        <Button fx:id="stopRecordingButton" text="%recording.stop" onAction="#onStopRecording" disable="true"/>
+                    </HBox>
+                    <HBox spacing="20" alignment="CENTER_LEFT">
+                        <Label text="%recording.status" style="-fx-font-weight: bold;"/>
+                        <Label fx:id="recordingStatusLabel" text="%recording.status.idle"/>
+                    </HBox>
+                    <Label fx:id="sampleCountLabel" text=""/>
+                </VBox>
+            </Tab>
+        </TabPane>
     </center>
 
     <bottom>

@@ -2,13 +2,41 @@ package com.tlcsdm.zeroprobe.controller;
 
 import com.tlcsdm.zeroprobe.config.AppSettings;
 import com.tlcsdm.zeroprobe.config.I18N;
+import com.tlcsdm.zeroprobe.export.CsvDataExporter;
+import com.tlcsdm.zeroprobe.export.DataExporter;
+import com.tlcsdm.zeroprobe.model.ConnectionConfig;
+import com.tlcsdm.zeroprobe.model.CpuInfo;
+import com.tlcsdm.zeroprobe.model.MemoryInfo;
+import com.tlcsdm.zeroprobe.model.ProcessInfo;
+import com.tlcsdm.zeroprobe.service.MonitoringService;
+import com.tlcsdm.zeroprobe.transport.ConnectionProvider;
+import com.tlcsdm.zeroprobe.transport.SerialConnectionProvider;
+import com.tlcsdm.zeroprobe.transport.SshConnectionProvider;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.text.MessageFormat;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Main controller for the ZeroProbe application.
@@ -16,18 +44,97 @@ import org.slf4j.LoggerFactory;
 public class MainController {
 
     private static final Logger LOG = LoggerFactory.getLogger(MainController.class);
+    private static final int MAX_DATA_POINTS = 60;
 
+    // Window controls
     @FXML
     private Label statusLabel;
-
     @FXML
     private Label windowTitleLabel;
-
     @FXML
     private Button maximizeButton;
-
     @FXML
     private Button closeButton;
+
+    // Tab pane
+    @FXML
+    private TabPane mainTabPane;
+
+    // Connection tab
+    @FXML
+    private ToggleGroup connectionTypeGroup;
+    @FXML
+    private RadioButton sshRadio;
+    @FXML
+    private RadioButton serialRadio;
+    @FXML
+    private VBox sshFieldsPane;
+    @FXML
+    private VBox serialFieldsPane;
+    @FXML
+    private TextField hostField;
+    @FXML
+    private TextField portField;
+    @FXML
+    private TextField usernameField;
+    @FXML
+    private PasswordField passwordField;
+    @FXML
+    private ComboBox<String> serialPortCombo;
+    @FXML
+    private ComboBox<String> baudRateCombo;
+    @FXML
+    private Button connectButton;
+    @FXML
+    private Button disconnectButton;
+    @FXML
+    private Label connectionStatusLabel;
+
+    // Monitor tab
+    @FXML
+    private LineChart<Number, Number> cpuChart;
+    @FXML
+    private NumberAxis cpuTimeAxis;
+    @FXML
+    private NumberAxis cpuUsageAxis;
+    @FXML
+    private LineChart<Number, Number> memoryChart;
+    @FXML
+    private NumberAxis memoryTimeAxis;
+    @FXML
+    private NumberAxis memoryUsageAxis;
+    @FXML
+    private Label currentCpuLabel;
+    @FXML
+    private Label currentMemoryLabel;
+
+    // Process tab
+    @FXML
+    private TextField pidField;
+    @FXML
+    private Button monitorProcessButton;
+    @FXML
+    private Label processNameLabel;
+    @FXML
+    private Label processStateLabel;
+    @FXML
+    private Label processThreadsLabel;
+    @FXML
+    private Label processVmRssLabel;
+    @FXML
+    private Label processCpuTimeLabel;
+
+    // Recording tab
+    @FXML
+    private TextField recordingPathField;
+    @FXML
+    private Button startRecordingButton;
+    @FXML
+    private Button stopRecordingButton;
+    @FXML
+    private Label recordingStatusLabel;
+    @FXML
+    private Label sampleCountLabel;
 
     private Stage primaryStage;
     private double dragOffsetX;
@@ -37,9 +144,55 @@ public class MainController {
     private static final String TITLE_BUTTON_CLOSE_HOVER_STYLE =
         "-fx-background-color: -color-danger-emphasis; -fx-text-fill: -color-fg-emphasis;";
 
+    private ConnectionProvider connectionProvider;
+    private MonitoringService monitoringService;
+    private DataExporter dataExporter;
+    private final AtomicInteger sampleCount = new AtomicInteger(0);
+    private volatile boolean connected;
+    private volatile boolean recording;
+
+    private XYChart.Series<Number, Number> cpuSeries;
+    private XYChart.Series<Number, Number> memorySeries;
+    private int cpuDataIndex;
+    private int memoryDataIndex;
+
     @FXML
     public void initialize() {
         statusLabel.setText(I18N.get("status.ready"));
+
+        // Connection type toggle
+        connectionTypeGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+            boolean isSsh = newVal == sshRadio;
+            sshFieldsPane.setVisible(isSsh);
+            sshFieldsPane.setManaged(isSsh);
+            serialFieldsPane.setVisible(!isSsh);
+            serialFieldsPane.setManaged(!isSsh);
+        });
+
+        // Populate baud rate combo
+        baudRateCombo.setItems(FXCollections.observableArrayList(
+            "9600", "19200", "38400", "57600", "115200"));
+        baudRateCombo.setValue("115200");
+
+        // Populate serial port combo with placeholder
+        serialPortCombo.setItems(FXCollections.observableArrayList(
+            "/dev/ttyUSB0", "/dev/ttyACM0", "/dev/ttyS0", "COM1", "COM3"));
+        serialPortCombo.setEditable(true);
+
+        // Initialize charts
+        cpuSeries = new XYChart.Series<>();
+        cpuSeries.setName(I18N.get("monitor.cpu"));
+        cpuChart.getData().add(cpuSeries);
+        cpuChart.setCreateSymbols(false);
+        cpuChart.setAnimated(false);
+        cpuChart.setLegendVisible(false);
+
+        memorySeries = new XYChart.Series<>();
+        memorySeries.setName(I18N.get("monitor.memory"));
+        memoryChart.getData().add(memorySeries);
+        memoryChart.setCreateSymbols(false);
+        memoryChart.setAnimated(false);
+        memoryChart.setLegendVisible(false);
     }
 
     /**
@@ -50,6 +203,255 @@ public class MainController {
         this.primaryStage.maximizedProperty().addListener((obs, oldVal, newVal) -> updateMaximizeButtonText());
         updateMaximizeButtonText();
     }
+
+    // ---- Connection handling ----
+
+    @FXML
+    public void onConnect() {
+        try {
+            ConnectionConfig config = buildConnectionConfig();
+            if (sshRadio.isSelected()) {
+                connectionProvider = new SshConnectionProvider();
+            } else {
+                connectionProvider = new SerialConnectionProvider();
+            }
+
+            statusLabel.setText(I18N.get("status.connecting"));
+            connectButton.setDisable(true);
+
+            Thread connectThread = new Thread(() -> {
+                try {
+                    connectionProvider.connect(config);
+                    Platform.runLater(() -> {
+                        connected = true;
+                        connectButton.setDisable(true);
+                        disconnectButton.setDisable(false);
+                        connectionStatusLabel.setText(
+                            MessageFormat.format(I18N.get("connection.status.connected"), config.toString()));
+                        statusLabel.setText(I18N.get("status.connected"));
+                        startMonitoring();
+                    });
+                } catch (Exception e) {
+                    LOG.error("Connection failed", e);
+                    Platform.runLater(() -> {
+                        connectButton.setDisable(false);
+                        connectionStatusLabel.setText(
+                            MessageFormat.format(I18N.get("connection.status.error"), e.getMessage()));
+                        statusLabel.setText(I18N.get("status.error"));
+                        showErrorDialog(I18N.get("dialog.error.connection"), e.getMessage());
+                    });
+                }
+            }, "zeroprobe-connect");
+            connectThread.setDaemon(true);
+            connectThread.start();
+        } catch (Exception e) {
+            LOG.error("Failed to create connection config", e);
+            showErrorDialog(I18N.get("dialog.error.connection"), e.getMessage());
+        }
+    }
+
+    @FXML
+    public void onDisconnect() {
+        stopMonitoring();
+        if (connectionProvider != null) {
+            connectionProvider.disconnect();
+            connectionProvider = null;
+        }
+        connected = false;
+        connectButton.setDisable(false);
+        disconnectButton.setDisable(true);
+        connectionStatusLabel.setText(I18N.get("connection.status.disconnected"));
+        statusLabel.setText(I18N.get("status.disconnected"));
+    }
+
+    private ConnectionConfig buildConnectionConfig() {
+        ConnectionConfig config = new ConnectionConfig();
+        if (sshRadio.isSelected()) {
+            config.setType(ConnectionConfig.ConnectionType.SSH);
+            config.setHost(hostField.getText().trim());
+            config.setPort(Integer.parseInt(portField.getText().trim()));
+            config.setUsername(usernameField.getText().trim());
+            config.setPassword(passwordField.getText());
+        } else {
+            config.setType(ConnectionConfig.ConnectionType.SERIAL);
+            config.setSerialPort(serialPortCombo.getValue());
+            config.setBaudRate(Integer.parseInt(baudRateCombo.getValue()));
+        }
+        return config;
+    }
+
+    // ---- Monitoring ----
+
+    private void startMonitoring() {
+        if (connectionProvider == null) {
+            return;
+        }
+        cpuDataIndex = 0;
+        memoryDataIndex = 0;
+
+        monitoringService = new MonitoringService(connectionProvider);
+        monitoringService.setOnCpuUpdate(this::handleCpuUpdate);
+        monitoringService.setOnMemoryUpdate(this::handleMemoryUpdate);
+        monitoringService.setOnProcessUpdate(this::handleProcessUpdate);
+        monitoringService.setOnError(error -> Platform.runLater(() ->
+            statusLabel.setText(I18N.get("status.error") + ": " + error)));
+        monitoringService.start();
+    }
+
+    private void stopMonitoring() {
+        if (monitoringService != null) {
+            monitoringService.shutdown();
+            monitoringService = null;
+        }
+    }
+
+    private void handleCpuUpdate(CpuInfo cpuInfo) {
+        int index = cpuDataIndex++;
+        Platform.runLater(() -> {
+            cpuSeries.getData().add(new XYChart.Data<>(index, cpuInfo.getUsagePercent()));
+            if (cpuSeries.getData().size() > MAX_DATA_POINTS) {
+                cpuSeries.getData().remove(0);
+            }
+            currentCpuLabel.setText(
+                MessageFormat.format(I18N.get("monitor.currentCpu"),
+                    String.format("%.1f", cpuInfo.getUsagePercent())));
+        });
+        exportCpuIfRecording(cpuInfo);
+    }
+
+    private void handleMemoryUpdate(MemoryInfo memInfo) {
+        int index = memoryDataIndex++;
+        Platform.runLater(() -> {
+            memorySeries.getData().add(new XYChart.Data<>(index, memInfo.getUsagePercent()));
+            if (memorySeries.getData().size() > MAX_DATA_POINTS) {
+                memorySeries.getData().remove(0);
+            }
+            currentMemoryLabel.setText(
+                MessageFormat.format(I18N.get("monitor.currentMemory"),
+                    String.format("%.1f", memInfo.getUsagePercent())));
+        });
+        exportMemoryIfRecording(memInfo);
+    }
+
+    private void handleProcessUpdate(ProcessInfo procInfo) {
+        Platform.runLater(() -> {
+            processNameLabel.setText(procInfo.getName());
+            processStateLabel.setText(procInfo.getState());
+            processThreadsLabel.setText(String.valueOf(procInfo.getThreads()));
+            processVmRssLabel.setText(String.valueOf(procInfo.getVmRssKb()));
+            processCpuTimeLabel.setText(procInfo.getUtime() + " / " + procInfo.getStime());
+        });
+        exportProcessIfRecording(procInfo);
+    }
+
+    // ---- Process monitoring ----
+
+    @FXML
+    public void onMonitorProcess() {
+        if (monitoringService == null) {
+            return;
+        }
+        String pidText = pidField.getText().trim();
+        if (pidText.isEmpty()) {
+            return;
+        }
+        try {
+            int pid = Integer.parseInt(pidText);
+            monitoringService.setMonitoredPid(pid);
+        } catch (NumberFormatException e) {
+            showErrorDialog(I18N.get("dialog.error.title"), "Invalid PID: " + pidText);
+        }
+    }
+
+    // ---- Recording ----
+
+    @FXML
+    public void onBrowsePath() {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle(I18N.get("recording.saveTo"));
+        File dir = chooser.showDialog(primaryStage);
+        if (dir != null) {
+            recordingPathField.setText(dir.getAbsolutePath());
+        }
+    }
+
+    @FXML
+    public void onStartRecording() {
+        String path = recordingPathField.getText().trim();
+        if (path.isEmpty()) {
+            showErrorDialog(I18N.get("dialog.error.title"), "Please specify a save path.");
+            return;
+        }
+
+        try {
+            dataExporter = new CsvDataExporter();
+            dataExporter.open(path);
+            recording = true;
+            sampleCount.set(0);
+            startRecordingButton.setDisable(true);
+            stopRecordingButton.setDisable(false);
+            recordingStatusLabel.setText(I18N.get("recording.status.recording"));
+            sampleCountLabel.setText(MessageFormat.format(I18N.get("recording.samples"), 0));
+            statusLabel.setText(MessageFormat.format(I18N.get("recording.started"), path));
+        } catch (Exception e) {
+            LOG.error("Failed to start recording", e);
+            showErrorDialog(I18N.get("dialog.error.title"), e.getMessage());
+        }
+    }
+
+    @FXML
+    public void onStopRecording() {
+        recording = false;
+        if (dataExporter != null) {
+            try {
+                dataExporter.flush();
+                dataExporter.close();
+            } catch (Exception e) {
+                LOG.error("Error closing exporter", e);
+            }
+            dataExporter = null;
+        }
+        startRecordingButton.setDisable(false);
+        stopRecordingButton.setDisable(true);
+        recordingStatusLabel.setText(I18N.get("recording.status.idle"));
+        int count = sampleCount.get();
+        statusLabel.setText(MessageFormat.format(I18N.get("recording.stopped"), count));
+    }
+
+    private void exportCpuIfRecording(CpuInfo cpuInfo) {
+        if (recording && dataExporter != null && dataExporter.isOpen()) {
+            try {
+                dataExporter.exportCpuInfo(cpuInfo);
+                int count = sampleCount.incrementAndGet();
+                Platform.runLater(() ->
+                    sampleCountLabel.setText(MessageFormat.format(I18N.get("recording.samples"), count)));
+            } catch (Exception e) {
+                LOG.error("Failed to export CPU data", e);
+            }
+        }
+    }
+
+    private void exportMemoryIfRecording(MemoryInfo memInfo) {
+        if (recording && dataExporter != null && dataExporter.isOpen()) {
+            try {
+                dataExporter.exportMemoryInfo(memInfo);
+            } catch (Exception e) {
+                LOG.error("Failed to export memory data", e);
+            }
+        }
+    }
+
+    private void exportProcessIfRecording(ProcessInfo procInfo) {
+        if (recording && dataExporter != null && dataExporter.isOpen()) {
+            try {
+                dataExporter.exportProcessInfo(procInfo);
+            } catch (Exception e) {
+                LOG.error("Failed to export process data", e);
+            }
+        }
+    }
+
+    // ---- Settings and Window controls ----
 
     /**
      * Open the settings dialog.
@@ -132,8 +534,7 @@ public class MainController {
      */
     @FXML
     public void showAbout() {
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-            javafx.scene.control.Alert.AlertType.INFORMATION);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(I18N.get("menu.about"));
         alert.setHeaderText(I18N.get("app.title"));
         alert.setContentText(I18N.get("about.description"));
@@ -145,6 +546,19 @@ public class MainController {
      */
     public void shutdown() {
         LOG.info("Application shutting down");
+        stopMonitoring();
+        if (connectionProvider != null) {
+            connectionProvider.disconnect();
+            connectionProvider = null;
+        }
+        if (dataExporter != null) {
+            try {
+                dataExporter.close();
+            } catch (Exception e) {
+                LOG.error("Error closing exporter during shutdown", e);
+            }
+            dataExporter = null;
+        }
     }
 
     private void closePrimaryStage() {
@@ -165,5 +579,13 @@ public class MainController {
         if (maximizeButton != null && primaryStage != null) {
             maximizeButton.setText(primaryStage.isMaximized() ? "❐" : "□");
         }
+    }
+
+    private void showErrorDialog(String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(I18N.get("dialog.error.title"));
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }
