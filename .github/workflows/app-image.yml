@@ -1,0 +1,45 @@
+name: App Image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app-image:
+    name: App image on Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Maven packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build with Maven
+        shell: bash
+        run: mvn -B clean package --no-transfer-progress -DskipTests
+
+      - name: Package app image
+        shell: pwsh
+        run: ./scripts/app-image.ps1
+
+      - name: Upload app image artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: javafx-tool-template-app-image-windows
+          path: dist/javafx-tool-template-app-image-windows-${{ env.APP_VERSION }}.zip
+          retention-days: 7

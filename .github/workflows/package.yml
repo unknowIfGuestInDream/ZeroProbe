@@ -1,0 +1,59 @@
+name: Package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package on ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Maven packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build with Maven
+        shell: bash
+        run: mvn -B clean package --no-transfer-progress -DskipTests
+
+      - name: Package with script (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/package.ps1
+
+      - name: Package with script (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash ./scripts/package.sh linux
+
+      - name: Package with script (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: bash ./scripts/package.sh mac
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: javafx-tool-template-${{ matrix.os }}
+          path: staging/
+          retention-days: 7
