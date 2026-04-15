@@ -471,9 +471,9 @@ public class MainController {
     }
 
     private void trimChartData(XYChart.Series<Number, Number> series) {
-        int limit = maxDataPoints;
-        while (series.getData().size() > limit) {
-            series.getData().removeFirst();
+        int excess = series.getData().size() - maxDataPoints;
+        if (excess > 0) {
+            series.getData().subList(0, excess).clear();
         }
     }
 
