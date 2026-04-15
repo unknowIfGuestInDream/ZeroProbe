@@ -143,7 +143,9 @@ public class MonitoringService {
 
     private void collectProcessList() {
         try {
-            String output = connectionProvider.executeCommand("ps -eo pid,comm --no-headers");
+            String output = connectionProvider.executeCommand(
+                "for d in /proc/[0-9]*; do pid=$(basename $d); "
+                    + "[ -f $d/comm ] && echo \"$pid $(cat $d/comm 2>/dev/null)\"; done");
             ProcessListInfo listInfo = processListParser.parse(output);
             if (listInfo != null && onProcessListUpdate != null) {
                 onProcessListUpdate.accept(listInfo);

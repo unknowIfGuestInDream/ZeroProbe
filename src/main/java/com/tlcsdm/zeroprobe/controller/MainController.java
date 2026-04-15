@@ -58,6 +58,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.util.StringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -332,6 +333,18 @@ public class MainController {
         memoryChart.setLegendVisible(false);
 
         // Initialize time range combo
+        StringConverter<TimeRange> timeRangeConverter = new StringConverter<>() {
+            @Override
+            public String toString(TimeRange range) {
+                return range == null ? "" : range.toString();
+            }
+
+            @Override
+            public TimeRange fromString(String string) {
+                return null;
+            }
+        };
+        timeRangeCombo.setConverter(timeRangeConverter);
         timeRangeCombo.setItems(FXCollections.observableArrayList(TimeRange.values()));
         timeRangeCombo.setValue(DEFAULT_TIME_RANGE);
         updateMonitorTimeAxes();
@@ -353,6 +366,7 @@ public class MainController {
         processCountChart.setLegendVisible(false);
 
         // Initialize process time range combo
+        processTimeRangeCombo.setConverter(timeRangeConverter);
         processTimeRangeCombo.setItems(FXCollections.observableArrayList(TimeRange.values()));
         processTimeRangeCombo.setValue(DEFAULT_TIME_RANGE);
         updateProcessTimeAxis();
@@ -368,6 +382,7 @@ public class MainController {
         processListSource = FXCollections.observableArrayList();
         filteredProcessList = new FilteredList<>(processListSource, p -> true);
         processListView.setItems(filteredProcessList);
+        processListView.setPlaceholder(new Label(I18N.get("process.notConnected")));
         processFilterField.textProperty().addListener((obs, oldVal, newVal) -> {
             String filter = newVal == null ? "" : newVal.trim().toLowerCase();
             filteredProcessList.setPredicate(entry -> {
