@@ -28,17 +28,7 @@ public class EnvironmentParser {
      * Parse kernel version from {@code uname -r} output.
      */
     public String parseKernelVersion(String output) {
-        if (output == null || output.isBlank()) {
-            return "";
-        }
-        for (String line : output.split("\n")) {
-            String trimmed = line.trim();
-            if (!trimmed.isEmpty()) {
-                int firstSpace = trimmed.indexOf(' ');
-                return firstSpace > 0 ? trimmed.substring(0, firstSpace) : trimmed;
-            }
-        }
-        return "";
+        return extractFirstToken(output);
     }
 
     /**
@@ -73,6 +63,10 @@ public class EnvironmentParser {
      * Parse architecture from {@code uname -m} output.
      */
     public String parseArchitecture(String output) {
+        return extractFirstToken(output);
+    }
+
+    private String extractFirstToken(String output) {
         if (output == null || output.isBlank()) {
             return "";
         }
