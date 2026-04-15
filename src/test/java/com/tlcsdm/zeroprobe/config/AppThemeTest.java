@@ -32,6 +32,13 @@ class AppThemeTest {
     }
 
     @Test
+    void testMissingThemesArePresent() {
+        assertEquals("settings.theme.atlantafx.cupertinoLight", AppTheme.ATLANTAFX_CUPERTINO_LIGHT.getDisplayNameKey());
+        assertEquals("settings.theme.atlantafx.cupertinoDark", AppTheme.ATLANTAFX_CUPERTINO_DARK.getDisplayNameKey());
+        assertEquals("settings.theme.atlantafx.dracula", AppTheme.ATLANTAFX_DRACULA.getDisplayNameKey());
+    }
+
+    @Test
     void testAllThemesHaveDisplayNameKey() {
         for (AppTheme theme : AppTheme.values()) {
             assertNotNull(theme.getDisplayNameKey(), "Theme " + theme.name() + " should have a display name key");
