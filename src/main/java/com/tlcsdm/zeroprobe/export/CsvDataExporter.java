@@ -26,7 +26,7 @@ public class CsvDataExporter implements DataExporter {
 
     private static final String CPU_HEADER = "timestamp,usage_percent,user,nice,system,idle,iowait,irq,softirq";
     private static final String MEMORY_HEADER = "timestamp,total_kb,free_kb,available_kb,buffers_kb,cached_kb,usage_percent";
-    private static final String PROCESS_HEADER = "timestamp,pid,name,state,threads,vmrss_kb,utime,stime";
+    private static final String PROCESS_HEADER = "timestamp,pid,name,state,ppid,uid,threads,vmrss_kb,vmsize_kb,vmpeak_kb,utime,stime,voluntary_ctxt_switches,nonvoluntary_ctxt_switches";
 
     private static final DateTimeFormatter TIMESTAMP_FMT =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
@@ -86,10 +86,13 @@ public class CsvDataExporter implements DataExporter {
         checkOpen();
         String ts = TIMESTAMP_FMT.format(Instant.ofEpochMilli(procInfo.getTimestamp()));
         String safeName = escapeCsv(procInfo.getName());
-        processWriter.write(String.format("%s,%d,%s,%s,%d,%d,%d,%d",
+        processWriter.write(String.format("%s,%d,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
             ts, procInfo.getPid(), safeName, procInfo.getState(),
-            procInfo.getThreads(), procInfo.getVmRssKb(), procInfo.getUtime(),
-            procInfo.getStime()));
+            procInfo.getPpid(), procInfo.getUid(),
+            procInfo.getThreads(), procInfo.getVmRssKb(),
+            procInfo.getVmSizeKb(), procInfo.getVmPeakKb(),
+            procInfo.getUtime(), procInfo.getStime(),
+            procInfo.getVoluntaryCtxtSwitches(), procInfo.getNonvoluntaryCtxtSwitches()));
         processWriter.newLine();
     }
 

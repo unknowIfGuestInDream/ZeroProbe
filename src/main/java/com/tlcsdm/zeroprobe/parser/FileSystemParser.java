@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * Parser for file system listing output from a remote Linux device.
- * Parses the output of {@code ls -la} to produce {@link FileEntry} objects.
+ * Parses the output of {@code ls -la} (with optional {@code --time-style}) to produce {@link FileEntry} objects.
  */
 public class FileSystemParser {
 
@@ -46,12 +46,11 @@ public class FileSystemParser {
 
     /**
      * Parse a single line of {@code ls -la} output.
-     * Expected format: permissions links owner group size month day time/year name
+     * Supports both standard format (month day time/year) and custom time-style (YYYY-MM-DD HH:MM:SS).
      */
     FileEntry parseLine(String line, String parentPath) {
-        // Split into at most 9 parts; the 9th part is the filename (may contain spaces)
         String[] parts = line.split("\\s+", 9);
-        if (parts.length < 9) {
+        if (parts.length < 8) {
             log.debug("Skipping unparseable ls line: {}", line);
             return null;
         }
@@ -62,8 +61,30 @@ public class FileSystemParser {
             String owner = parts[2];
             String group = parts[3];
             long size = parseSizeSafe(parts[4]);
-            String lastModified = parts[5] + " " + parts[6] + " " + parts[7];
-            String name = parts[8];
+
+            String lastModified;
+            String name;
+
+            // Detect format: if parts[5] starts with a digit, it's YYYY-MM-DD date format (8 fields)
+            if (parts[5].length() >= 4 && Character.isDigit(parts[5].charAt(0))) {
+                // New format: permissions links owner group size date time name
+                if (parts.length < 8) {
+                    log.debug("Skipping unparseable ls line (new format): {}", line);
+                    return null;
+                }
+                lastModified = parts[5] + " " + parts[6];
+                // Re-split with limit 8 to keep name with spaces intact
+                String[] reParts = line.split("\\s+", 8);
+                name = reParts.length >= 8 ? reParts[7] : parts[7];
+            } else {
+                // Old format: permissions links owner group size month day time/year name
+                if (parts.length < 9) {
+                    log.debug("Skipping unparseable ls line (old format): {}", line);
+                    return null;
+                }
+                lastModified = parts[5] + " " + parts[6] + " " + parts[7];
+                name = parts[8];
+            }
 
             // Handle symlinks: name -> target
             int arrowIdx = name.indexOf(" -> ");

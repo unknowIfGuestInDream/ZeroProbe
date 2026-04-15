@@ -135,10 +135,10 @@
                         </GridPane>
                     </VBox>
 
-                    <!-- Connect / Disconnect buttons -->
+                    <!-- Connect / Disconnect button -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Button fx:id="connectButton" text="%connection.connect" onAction="#onConnect"/>
-                        <Button fx:id="disconnectButton" text="%connection.disconnect" onAction="#onDisconnect" disable="true"/>
+                        <Button fx:id="connectButton" text="⏻  %connection.connect" onAction="#onToggleConnection"
+                                style="-fx-font-size: 14;"/>
                     </HBox>
 
                     <!-- Connection status -->
@@ -232,12 +232,24 @@
                                 <Label fx:id="processNameLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                                 <Label text="%process.state" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                                 <Label fx:id="processStateLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                                <Label text="%process.threads" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                                <Label fx:id="processThreadsLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                                <Label text="%process.vmrss" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-                                <Label fx:id="processVmRssLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
-                                <Label text="%process.cpuTime" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
-                                <Label fx:id="processCpuTimeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                                <Label text="%process.ppid" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                                <Label fx:id="processPpidLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                <Label text="%process.uid" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                                <Label fx:id="processUidLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                <Label text="%process.threads" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                                <Label fx:id="processThreadsLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                                <Label text="%process.vmrss" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+                                <Label fx:id="processVmRssLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+                                <Label text="%process.vmSize" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+                                <Label fx:id="processVmSizeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+                                <Label text="%process.vmPeak" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
+                                <Label fx:id="processVmPeakLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="8"/>
+                                <Label text="%process.cpuTime" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="9"/>
+                                <Label fx:id="processCpuTimeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="9"/>
+                                <Label text="%process.voluntary" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="10"/>
+                                <Label fx:id="processVoluntaryLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
+                                <Label text="%process.nonvoluntary" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="11"/>
+                                <Label fx:id="processNonvoluntaryLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="11"/>
                             </GridPane>
                         </VBox>
                     </SplitPane>
@@ -246,9 +258,9 @@
 
             <!-- Environment Tab -->
             <Tab text="%tab.environment" closable="false">
-                <VBox spacing="10">
+                <VBox spacing="5">
                     <padding>
-                        <Insets top="10" right="10" bottom="10" left="10"/>
+                        <Insets top="5" right="10" bottom="5" left="10"/>
                     </padding>
                     <HBox spacing="10" alignment="CENTER_LEFT">
                         <Button fx:id="envRefreshButton" text="%environment.refresh" onAction="#onRefreshEnvironment"/>
@@ -257,9 +269,9 @@
 
                     <!-- System Information -->
                     <TitledPane text="%environment.systemInfo" animated="false" collapsible="false">
-                        <GridPane hgap="10" vgap="8">
+                        <GridPane hgap="10" vgap="5">
                             <padding>
-                                <Insets top="10" right="10" bottom="10" left="10"/>
+                                <Insets top="5" right="10" bottom="5" left="10"/>
                             </padding>
                             <columnConstraints>
                                 <ColumnConstraints minWidth="120" prefWidth="150"/>
@@ -367,28 +379,7 @@
                 </VBox>
             </Tab>
 
-            <!-- Recording Tab -->
-            <Tab text="%tab.recording" closable="false">
-                <VBox spacing="15">
-                    <padding>
-                        <Insets top="20" right="20" bottom="20" left="20"/>
-                    </padding>
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="%recording.saveTo"/>
-                        <TextField fx:id="recordingPathField" HBox.hgrow="ALWAYS" promptText="/path/to/output"/>
-                        <Button text="%recording.browse" onAction="#onBrowsePath"/>
-                    </HBox>
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Button fx:id="startRecordingButton" text="%recording.start" onAction="#onStartRecording"/>
-                        <Button fx:id="stopRecordingButton" text="%recording.stop" onAction="#onStopRecording" disable="true"/>
-                    </HBox>
-                    <HBox spacing="20" alignment="CENTER_LEFT">
-                        <Label text="%recording.status" style="-fx-font-weight: bold;"/>
-                        <Label fx:id="recordingStatusLabel" text="%recording.status.idle"/>
-                    </HBox>
-                    <Label fx:id="sampleCountLabel" text=""/>
-                </VBox>
-            </Tab>
+
         </TabPane>
     </center>
 

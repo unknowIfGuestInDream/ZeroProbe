@@ -96,4 +96,36 @@ class FileSystemParserTest {
         assertNull(parser.parseLine("short line", "/"));
         assertNull(parser.parseLine("", "/"));
     }
+
+    @Test
+    void testParseLsOutputTimeStyleFormat() {
+        String output = """
+            total 68
+            drwxr-xr-x  20 root root  4096 2024-01-05 12:00:00 .
+            drwxr-xr-x  20 root root  4096 2024-01-05 12:00:00 ..
+            drwxr-xr-x   2 root root  4096 2024-01-03 10:30:00 bin
+            -rw-r--r--   1 root root  1234 2024-01-04 08:15:30 test.txt
+            lrwxrwxrwx   1 root root     7 2024-01-03 10:30:00 lib -> usr/lib
+            """;
+
+        List<FileEntry> entries = parser.parseLsOutput(output, "/");
+
+        assertEquals(3, entries.size());
+
+        FileEntry bin = entries.get(0);
+        assertEquals("bin", bin.getName());
+        assertEquals("/bin", bin.getPath());
+        assertTrue(bin.isDirectory());
+        assertEquals(4096, bin.getSize());
+        assertEquals("drwxr-xr-x", bin.getPermissions());
+        assertEquals("2024-01-03 10:30:00", bin.getLastModified());
+
+        FileEntry testFile = entries.get(1);
+        assertEquals("test.txt", testFile.getName());
+        assertFalse(testFile.isDirectory());
+        assertEquals("2024-01-04 08:15:30", testFile.getLastModified());
+
+        FileEntry lib = entries.get(2);
+        assertEquals("lib", lib.getName());
+    }
 }
