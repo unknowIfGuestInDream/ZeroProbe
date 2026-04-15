@@ -58,4 +58,11 @@ class I18NTest {
         assertFalse(I18N.get("window.maximize").isEmpty(), "window.maximize should not be empty");
         assertFalse(I18N.get("window.close").isEmpty(), "window.close should not be empty");
     }
+
+    @Test
+    void testGetProcessI18nKeys() {
+        assertFalse(I18N.get("process.notConnected").isEmpty(), "process.notConnected should not be empty");
+        assertNotEquals("process.notConnected", I18N.get("process.notConnected"),
+            "process.notConnected should be a valid i18n key");
+    }
 }

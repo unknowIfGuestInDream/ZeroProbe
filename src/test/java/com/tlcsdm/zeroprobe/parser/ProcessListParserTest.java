@@ -102,4 +102,23 @@ class ProcessListParserTest {
         assertNotNull(info);
         assertThrows(UnsupportedOperationException.class, () -> info.getProcesses().add(new ProcessEntry(99, "test")));
     }
+
+    @Test
+    void testParseProcFilesystemOutput() {
+        // Output from: for d in /proc/[0-9]*; do pid=$(basename $d); [ -f $d/comm ] && echo "$pid $(cat $d/comm)"; done
+        String output = """
+            1 systemd
+            2 kthreadd
+            42 sshd
+            100 bash
+            1234 python3
+            """;
+        ProcessListInfo info = parser.parse(output);
+        assertNotNull(info);
+        assertEquals(5, info.getProcessCount());
+        assertEquals(1, info.getProcesses().get(0).pid());
+        assertEquals("systemd", info.getProcesses().get(0).name());
+        assertEquals(1234, info.getProcesses().get(4).pid());
+        assertEquals("python3", info.getProcesses().get(4).name());
+    }
 }
