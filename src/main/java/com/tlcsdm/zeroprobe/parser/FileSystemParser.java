@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Parser for file system listing output from a remote Linux device.
@@ -14,6 +15,7 @@ import java.util.List;
 public class FileSystemParser {
 
     private static final Logger log = LoggerFactory.getLogger(FileSystemParser.class);
+    private static final Pattern ISO_DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
     /**
      * Parse {@code ls -la} output into a list of FileEntry objects.
@@ -65,8 +67,8 @@ public class FileSystemParser {
             String lastModified;
             String name;
 
-            // Detect format: if parts[5] starts with a digit, it's YYYY-MM-DD date format (8 fields)
-            if (parts[5].length() >= 4 && Character.isDigit(parts[5].charAt(0))) {
+            // Detect format: if parts[5] matches YYYY-MM-DD pattern, it's custom time-style (8 fields)
+            if (ISO_DATE_PATTERN.matcher(parts[5]).matches()) {
                 // New format: permissions links owner group size date time name
                 if (parts.length < 8) {
                     log.debug("Skipping unparseable ls line (new format): {}", line);

@@ -523,15 +523,17 @@ public class MainController {
 
     // ---- Connection handling ----
 
-    private static final String CONNECT_ICON = "\u23FB  ";
-    private static final String DISCONNECT_ICON = "\u23F9  ";
+    private static final String POWER_ICON = "\u23FB  ";
+    private static final String STOP_ICON = "\u23F9  ";
+    private static final String FOLDER_ICON = "\uD83D\uDCC1";
+    private static final String FILE_ICON = "\uD83D\uDCC4";
 
     private void updateConnectButtonState() {
         if (connected) {
-            connectButton.setText(DISCONNECT_ICON + I18N.get("connection.disconnect"));
+            connectButton.setText(STOP_ICON + I18N.get("connection.disconnect"));
             connectButton.setStyle("-fx-font-size: 14; -fx-text-fill: -color-danger-fg;");
         } else {
-            connectButton.setText(CONNECT_ICON + I18N.get("connection.connect"));
+            connectButton.setText(POWER_ICON + I18N.get("connection.connect"));
             connectButton.setStyle("-fx-font-size: 14;");
         }
     }
@@ -840,7 +842,7 @@ public class MainController {
                     setGraphic(null);
                 } else {
                     setText(item.getName());
-                    Label icon = new Label(item.isDirectory() ? "\uD83D\uDCC1" : "\uD83D\uDCC4");
+                    Label icon = new Label(item.isDirectory() ? FOLDER_ICON : FILE_ICON);
                     icon.setStyle("-fx-font-size: 14;");
                     setGraphic(icon);
                 }
@@ -1381,14 +1383,15 @@ public class MainController {
 
     /**
      * Normalize a permission string to standard 10-character rwx format with dashes.
-     * Ensures missing permissions show as '-' (e.g., "rwxr-xr-x" instead of "rwxrxrx").
+     * Expects input from {@code ls -la} output (e.g., "drwxr-xr-x", "-rw-r--r--").
+     * If the string is already 10 characters, it's returned as-is.
+     * Shorter strings are padded assuming missing characters represent absent permissions.
      */
     private String normalizePermissions(String permissions) {
         if (permissions == null || permissions.isEmpty()) {
             return "-";
         }
-        // Standard ls -la output is already 10 chars (e.g., "drwxr-xr-x")
-        if (permissions.length() == 10) {
+        if (permissions.length() >= 10) {
             return permissions;
         }
         // If shorter than expected, pad positions with dashes
