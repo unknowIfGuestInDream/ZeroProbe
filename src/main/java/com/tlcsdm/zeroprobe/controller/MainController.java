@@ -10,12 +10,14 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.tlcsdm.zeroprobe.model.ConnectionConfig;
 import com.tlcsdm.zeroprobe.model.CpuInfo;
 import com.tlcsdm.zeroprobe.model.EnvironmentInfo;
+import com.tlcsdm.zeroprobe.model.FileEntry;
 import com.tlcsdm.zeroprobe.model.MemoryInfo;
 import com.tlcsdm.zeroprobe.model.ProcessInfo;
 import com.tlcsdm.zeroprobe.model.ProcessListInfo;
 import com.tlcsdm.zeroprobe.model.ProcessListInfo.ProcessEntry;
 import com.tlcsdm.zeroprobe.model.TimeRange;
 import com.tlcsdm.zeroprobe.parser.EnvironmentParser;
+import com.tlcsdm.zeroprobe.parser.FileSystemParser;
 import com.tlcsdm.zeroprobe.service.MonitoringService;
 import com.tlcsdm.zeroprobe.transport.ConnectionProvider;
 import com.tlcsdm.zeroprobe.transport.SerialConnectionProvider;
@@ -32,6 +34,7 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -41,12 +44,16 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
@@ -57,7 +64,12 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -196,6 +208,46 @@ public class MainController {
     @FXML
     private TableView<Map.Entry<String, String>> envVarsTable;
 
+    // File Browser tab
+    @FXML
+    private Button fileBrowserRefreshButton;
+    @FXML
+    private CheckBox fileBrowserAutoRefreshCheck;
+    @FXML
+    private Label fileBrowserStatusLabel;
+    @FXML
+    private SplitPane fileBrowserSplitPane;
+    @FXML
+    private TreeView<FileEntry> fileBrowserTreeView;
+    @FXML
+    private Label fileBrowserDetailHintLabel;
+    @FXML
+    private GridPane fileBrowserDetailsGrid;
+    @FXML
+    private Label fileBrowserNameLabel;
+    @FXML
+    private Label fileBrowserPathLabel;
+    @FXML
+    private Label fileBrowserTypeLabel;
+    @FXML
+    private Label fileBrowserSizeLabel;
+    @FXML
+    private Label fileBrowserPermissionsLabel;
+    @FXML
+    private Label fileBrowserOwnerLabel;
+    @FXML
+    private Label fileBrowserGroupLabel;
+    @FXML
+    private Label fileBrowserLastModifiedLabel;
+    @FXML
+    private HBox fileBrowserContentButtonBox;
+    @FXML
+    private Button fileBrowserViewContentButton;
+    @FXML
+    private TitledPane fileBrowserContentPane;
+    @FXML
+    private TextArea fileBrowserContentArea;
+
     private Stage primaryStage;
     private double dragOffsetX;
     private double dragOffsetY;
@@ -230,6 +282,11 @@ public class MainController {
     private double resizeStartH;
     private double resizeStartStageX;
     private double resizeStartStageY;
+
+    private final FileSystemParser fileSystemParser = new FileSystemParser();
+    private ScheduledExecutorService fileAutoRefreshExecutor;
+    private ScheduledFuture<?> fileAutoRefreshFuture;
+    private volatile FileEntry selectedFileEntry;
 
     @FXML
     public void initialize() {
@@ -331,6 +388,9 @@ public class MainController {
 
         // Initialize environment variables table columns
         initEnvironmentTable();
+
+        // Initialize file browser
+        initFileBrowser();
     }
 
     /**
@@ -495,6 +555,7 @@ public class MainController {
         connectionStatusLabel.setText(I18N.get("connection.status.disconnected"));
         statusLabel.setText(I18N.get("status.disconnected"));
         clearEnvironmentTab();
+        clearFileBrowserTab();
     }
 
     private ConnectionConfig buildConnectionConfig() {
@@ -681,6 +742,236 @@ public class MainController {
         envUptimeField.setText("");
         envVarsTable.getItems().clear();
         envStatusLabel.setText(I18N.get("environment.notConnected"));
+    }
+
+    // ---- File Browser ----
+
+    private void initFileBrowser() {
+        fileBrowserTreeView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && newVal.getValue() != null) {
+                showFileDetails(newVal.getValue());
+            }
+        });
+
+        // Lazy-load children on expand
+        fileBrowserTreeView.setCellFactory(tv -> new javafx.scene.control.TreeCell<>() {
+            @Override
+            protected void updateItem(FileEntry item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+
+        fileBrowserAutoRefreshCheck.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            if (Boolean.TRUE.equals(newVal)) {
+                startFileAutoRefresh();
+            } else {
+                stopFileAutoRefresh();
+            }
+        });
+    }
+
+    @FXML
+    public void onRefreshFileBrowser() {
+        if (!connected || connectionProvider == null) {
+            fileBrowserStatusLabel.setText(I18N.get("fileBrowser.notConnected"));
+            return;
+        }
+
+        fileBrowserRefreshButton.setDisable(true);
+        fileBrowserStatusLabel.setText(I18N.get("fileBrowser.loading"));
+
+        Thread thread = new Thread(() -> {
+            try {
+                String output = connectionProvider.executeCommand("ls -la /");
+                List<FileEntry> entries = fileSystemParser.parseLsOutput(output, "/");
+
+                Platform.runLater(() -> {
+                    FileEntry rootEntry = new FileEntry("/", "/", true, 0, "", "", "", "");
+                    TreeItem<FileEntry> rootItem = new TreeItem<>(rootEntry);
+                    rootItem.setExpanded(true);
+
+                    for (FileEntry entry : entries) {
+                        TreeItem<FileEntry> child = createTreeItem(entry);
+                        rootItem.getChildren().add(child);
+                    }
+
+                    fileBrowserTreeView.setRoot(rootItem);
+                    fileBrowserStatusLabel.setText("");
+                    fileBrowserRefreshButton.setDisable(false);
+                });
+            } catch (Exception e) {
+                LOG.error("Failed to load file listing", e);
+                Platform.runLater(() -> {
+                    fileBrowserStatusLabel.setText(I18N.get("status.error") + ": " + e.getMessage());
+                    fileBrowserRefreshButton.setDisable(false);
+                });
+            }
+        }, "zeroprobe-filebrowser");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private TreeItem<FileEntry> createTreeItem(FileEntry entry) {
+        TreeItem<FileEntry> item = new TreeItem<>(entry);
+        if (entry.isDirectory()) {
+            // Add a dummy child so the expand arrow shows
+            item.getChildren().add(new TreeItem<>());
+            item.expandedProperty().addListener((obs, wasExpanded, isExpanded) -> {
+                if (isExpanded && item.getChildren().size() == 1 && item.getChildren().getFirst().getValue() == null) {
+                    loadChildren(item);
+                }
+            });
+        }
+        return item;
+    }
+
+    private void loadChildren(TreeItem<FileEntry> parentItem) {
+        FileEntry parentEntry = parentItem.getValue();
+        if (parentEntry == null || !connected || connectionProvider == null) {
+            return;
+        }
+
+        Thread thread = new Thread(() -> {
+            try {
+                String safePath = parentEntry.getPath().replace("'", "'\\''");
+                String output = connectionProvider.executeCommand("ls -la '" + safePath + "'");
+                List<FileEntry> entries = fileSystemParser.parseLsOutput(output, parentEntry.getPath());
+
+                Platform.runLater(() -> {
+                    parentItem.getChildren().clear();
+                    for (FileEntry entry : entries) {
+                        parentItem.getChildren().add(createTreeItem(entry));
+                    }
+                });
+            } catch (Exception e) {
+                LOG.error("Failed to load directory: {}", parentEntry.getPath(), e);
+                Platform.runLater(() -> parentItem.getChildren().clear());
+            }
+        }, "zeroprobe-filebrowser-load");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void showFileDetails(FileEntry entry) {
+        selectedFileEntry = entry;
+        fileBrowserDetailHintLabel.setVisible(false);
+        fileBrowserDetailHintLabel.setManaged(false);
+        fileBrowserDetailsGrid.setVisible(true);
+        fileBrowserDetailsGrid.setManaged(true);
+
+        fileBrowserNameLabel.setText(entry.getName());
+        fileBrowserPathLabel.setText(entry.getPath());
+        fileBrowserTypeLabel.setText(entry.isDirectory()
+            ? I18N.get("fileBrowser.type.directory")
+            : I18N.get("fileBrowser.type.file"));
+        fileBrowserSizeLabel.setText(entry.getFormattedSize());
+        fileBrowserPermissionsLabel.setText(entry.getPermissions());
+        fileBrowserOwnerLabel.setText(entry.getOwner());
+        fileBrowserGroupLabel.setText(entry.getGroup());
+        fileBrowserLastModifiedLabel.setText(entry.getLastModified());
+
+        boolean isFile = !entry.isDirectory() && !"/".equals(entry.getPath());
+        fileBrowserContentButtonBox.setVisible(isFile);
+        fileBrowserContentButtonBox.setManaged(isFile);
+
+        // Hide content pane when switching selection
+        fileBrowserContentPane.setVisible(false);
+        fileBrowserContentPane.setManaged(false);
+        fileBrowserContentArea.clear();
+        stopFileAutoRefresh();
+        fileBrowserAutoRefreshCheck.setSelected(false);
+    }
+
+    @FXML
+    public void onViewFileContent() {
+        if (selectedFileEntry == null || selectedFileEntry.isDirectory()) {
+            return;
+        }
+        if (!connected || connectionProvider == null) {
+            return;
+        }
+
+        fileBrowserContentPane.setVisible(true);
+        fileBrowserContentPane.setManaged(true);
+        fileBrowserContentArea.setText(I18N.get("fileBrowser.loading"));
+
+        Thread thread = new Thread(() -> {
+            try {
+                String safePath = selectedFileEntry.getPath().replace("'", "'\\''");
+                String content = connectionProvider.executeCommand("cat '" + safePath + "'");
+                Platform.runLater(() -> fileBrowserContentArea.setText(content));
+            } catch (Exception e) {
+                LOG.error("Failed to read file: {}", selectedFileEntry.getPath(), e);
+                Platform.runLater(() ->
+                    fileBrowserContentArea.setText(I18N.get("status.error") + ": " + e.getMessage()));
+            }
+        }, "zeroprobe-fileview");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void startFileAutoRefresh() {
+        stopFileAutoRefresh();
+        if (selectedFileEntry == null || selectedFileEntry.isDirectory() || !connected || connectionProvider == null) {
+            return;
+        }
+
+        // Show content pane if not visible
+        if (!fileBrowserContentPane.isVisible()) {
+            fileBrowserContentPane.setVisible(true);
+            fileBrowserContentPane.setManaged(true);
+        }
+
+        fileAutoRefreshExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "zeroprobe-file-autorefresh");
+            t.setDaemon(true);
+            return t;
+        });
+        fileAutoRefreshFuture = fileAutoRefreshExecutor.scheduleWithFixedDelay(() -> {
+            try {
+                FileEntry current = selectedFileEntry;
+                if (current == null || current.isDirectory() || !connected || connectionProvider == null) {
+                    return;
+                }
+                String safePath = current.getPath().replace("'", "'\\''");
+                String content = connectionProvider.executeCommand("cat '" + safePath + "'");
+                Platform.runLater(() -> {
+                    fileBrowserContentArea.setText(content);
+                    fileBrowserContentArea.setScrollTop(Double.MAX_VALUE);
+                });
+            } catch (Exception e) {
+                LOG.debug("Auto-refresh failed for file content", e);
+            }
+        }, 0, 3, TimeUnit.SECONDS);
+    }
+
+    private void stopFileAutoRefresh() {
+        if (fileAutoRefreshFuture != null) {
+            fileAutoRefreshFuture.cancel(false);
+            fileAutoRefreshFuture = null;
+        }
+        if (fileAutoRefreshExecutor != null) {
+            fileAutoRefreshExecutor.shutdownNow();
+            fileAutoRefreshExecutor = null;
+        }
+    }
+
+    private void clearFileBrowserTab() {
+        fileBrowserTreeView.setRoot(null);
+        fileBrowserDetailHintLabel.setVisible(true);
+        fileBrowserDetailHintLabel.setManaged(true);
+        fileBrowserDetailsGrid.setVisible(false);
+        fileBrowserDetailsGrid.setManaged(false);
+        fileBrowserContentButtonBox.setVisible(false);
+        fileBrowserContentButtonBox.setManaged(false);
+        fileBrowserContentPane.setVisible(false);
+        fileBrowserContentPane.setManaged(false);
+        fileBrowserContentArea.clear();
+        fileBrowserStatusLabel.setText(I18N.get("fileBrowser.notConnected"));
+        stopFileAutoRefresh();
+        fileBrowserAutoRefreshCheck.setSelected(false);
+        selectedFileEntry = null;
     }
 
     // ---- Recording ----
@@ -892,6 +1183,7 @@ public class MainController {
         LOG.info("Application shutting down");
         saveConnectionSettings();
         stopMonitoring();
+        stopFileAutoRefresh();
         if (connectionProvider != null) {
             connectionProvider.disconnect();
             connectionProvider = null;
