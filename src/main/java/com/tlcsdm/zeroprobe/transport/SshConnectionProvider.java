@@ -96,11 +96,11 @@ public class SshConnectionProvider implements ConnectionProvider {
             String stderr = errStream.toString(StandardCharsets.UTF_8);
 
             if (!stderr.isBlank()) {
-                log.warn("Command stderr [{}]: {}", command, stderr.trim());
+                log.debug("Command stderr [{}]: {}", command, stderr.trim());
             }
             // exitStatus -1 means the server did not send an exit status (e.g. channel not yet closed)
             if (exitStatus != 0 && exitStatus != -1) {
-                log.warn("Command [{}] exited with status {}", command, exitStatus);
+                log.debug("Command [{}] exited with status {}", command, exitStatus);
             }
 
             return result;
