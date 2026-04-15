@@ -162,7 +162,7 @@
                     <HBox spacing="10" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                         <LineChart fx:id="cpuChart" title="%monitor.cpuChart" HBox.hgrow="ALWAYS" prefHeight="400">
                             <xAxis>
-                                <NumberAxis fx:id="cpuTimeAxis" label="%monitor.timeAxis" autoRanging="true"/>
+                                <NumberAxis fx:id="cpuTimeAxis" label="%monitor.timeAxis" autoRanging="false" lowerBound="0" upperBound="60" tickUnit="10"/>
                             </xAxis>
                             <yAxis>
                                 <NumberAxis fx:id="cpuUsageAxis" label="%monitor.usageAxis" lowerBound="0" upperBound="100" autoRanging="false"/>
@@ -170,7 +170,7 @@
                         </LineChart>
                         <LineChart fx:id="memoryChart" title="%monitor.memoryChart" HBox.hgrow="ALWAYS" prefHeight="400">
                             <xAxis>
-                                <NumberAxis fx:id="memoryTimeAxis" label="%monitor.timeAxis" autoRanging="true"/>
+                                <NumberAxis fx:id="memoryTimeAxis" label="%monitor.timeAxis" autoRanging="false" lowerBound="0" upperBound="60" tickUnit="10"/>
                             </xAxis>
                             <yAxis>
                                 <NumberAxis fx:id="memoryUsageAxis" label="%monitor.usageAxis" lowerBound="0" upperBound="100" autoRanging="false"/>
@@ -199,7 +199,7 @@
                             </HBox>
                             <LineChart fx:id="processCountChart" prefHeight="200" VBox.vgrow="ALWAYS">
                                 <xAxis>
-                                    <NumberAxis fx:id="processCountTimeAxis" label="%monitor.timeAxis" autoRanging="true"/>
+                                    <NumberAxis fx:id="processCountTimeAxis" label="%monitor.timeAxis" autoRanging="false" lowerBound="0" upperBound="60" tickUnit="10"/>
                                 </xAxis>
                                 <yAxis>
                                     <NumberAxis fx:id="processCountAxis" label="%process.processCount" autoRanging="true" lowerBound="0"/>
