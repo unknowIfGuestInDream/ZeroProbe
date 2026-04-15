@@ -287,7 +287,7 @@
 
                     <!-- Environment Variables -->
                     <TitledPane text="%environment.envVars" animated="false" VBox.vgrow="ALWAYS">
-                        <TableView fx:id="envVarsTable" VBox.vgrow="ALWAYS"/>
+                        <TableView fx:id="envVarsTable"/>
                     </TitledPane>
                 </VBox>
             </Tab>

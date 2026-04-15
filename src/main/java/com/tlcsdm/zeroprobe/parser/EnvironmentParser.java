@@ -83,6 +83,9 @@ public class EnvironmentParser {
         }
         try {
             String[] parts = output.trim().split("\\s+");
+            if (parts.length == 0) {
+                return output.trim();
+            }
             double totalSeconds = Double.parseDouble(parts[0]);
             long days = (long) (totalSeconds / 86400);
             long hours = (long) ((totalSeconds % 86400) / 3600);
