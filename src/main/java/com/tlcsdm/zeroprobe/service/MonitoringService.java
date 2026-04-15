@@ -35,6 +35,7 @@ public class MonitoringService {
 
     private ScheduledExecutorService scheduler;
     private volatile int monitoredPid = -1;
+    private volatile boolean stopping;
 
     private Consumer<CpuInfo> onCpuUpdate;
     private Consumer<MemoryInfo> onMemoryUpdate;
@@ -54,6 +55,7 @@ public class MonitoringService {
     public void start(int intervalMs) {
         stop();
         cpuParser.reset();
+        stopping = false;
 
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "zeroprobe-monitor");
@@ -80,6 +82,7 @@ public class MonitoringService {
      */
     public void stop() {
         if (scheduler != null && !scheduler.isShutdown()) {
+            stopping = true;
             scheduler.shutdownNow();
             scheduler = null;
             log.info("Monitoring stopped");
@@ -90,9 +93,21 @@ public class MonitoringService {
      * Perform a single data collection cycle.
      */
     private void collectData() {
+        if (!shouldContinueCollection()) {
+            return;
+        }
         collectCpu();
+        if (!shouldContinueCollection()) {
+            return;
+        }
         collectMemory();
+        if (!shouldContinueCollection()) {
+            return;
+        }
         collectProcessList();
+        if (!shouldContinueCollection()) {
+            return;
+        }
         collectProcess();
     }
 
@@ -104,6 +119,9 @@ public class MonitoringService {
                 onCpuUpdate.accept(cpuInfo);
             }
         } catch (Exception e) {
+            if (handleExpectedStopException("CPU", e)) {
+                return;
+            }
             log.error("CPU collection failed", e);
             notifyError("CPU collection failed: " + e.getMessage());
         }
@@ -117,6 +135,9 @@ public class MonitoringService {
                 onMemoryUpdate.accept(memInfo);
             }
         } catch (Exception e) {
+            if (handleExpectedStopException("Memory", e)) {
+                return;
+            }
             log.error("Memory collection failed", e);
             notifyError("Memory collection failed: " + e.getMessage());
         }
@@ -136,6 +157,9 @@ public class MonitoringService {
                 onProcessUpdate.accept(procInfo);
             }
         } catch (Exception e) {
+            if (handleExpectedStopException("Process", e)) {
+                return;
+            }
             log.error("Process collection failed for PID {}", pid, e);
             notifyError("Process collection failed for PID " + pid + ": " + e.getMessage());
         }
@@ -153,9 +177,32 @@ public class MonitoringService {
                 onProcessListUpdate.accept(listInfo);
             }
         } catch (Exception e) {
+            if (handleExpectedStopException("Process list", e)) {
+                return;
+            }
             log.error("Process list collection failed", e);
             notifyError("Process list collection failed: " + e.getMessage());
         }
+    }
+
+    private boolean shouldContinueCollection() {
+        return !stopping && !Thread.currentThread().isInterrupted();
+    }
+
+    private boolean handleExpectedStopException(String metric, Exception e) {
+        if (!stopping) {
+            return false;
+        }
+        if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+            log.debug("{} collection interrupted during shutdown", metric);
+            return true;
+        }
+        if (!connectionProvider.isConnected()) {
+            log.debug("{} collection skipped during shutdown: {}", metric, e.getMessage());
+            return true;
+        }
+        return false;
     }
 
     private void notifyError(String message) {
