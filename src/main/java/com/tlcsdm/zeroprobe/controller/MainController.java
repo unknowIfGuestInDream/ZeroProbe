@@ -679,30 +679,22 @@ public class MainController {
         }
     }
 
+    private static final int TICK_DIVISIONS = 6;
+
     private void updateTimeAxis(NumberAxis axis, int currentIndex, int range) {
         int upper = Math.max(currentIndex, range);
         axis.setLowerBound(upper - range);
         axis.setUpperBound(upper);
-        axis.setTickUnit(Math.max(1, range / 6));
+        axis.setTickUnit(Math.max(1, range / TICK_DIVISIONS));
     }
 
     private void updateMonitorTimeAxes() {
-        int cpuUpper = Math.max(cpuDataIndex, maxDataPoints);
-        cpuTimeAxis.setLowerBound(cpuUpper - maxDataPoints);
-        cpuTimeAxis.setUpperBound(cpuUpper);
-        cpuTimeAxis.setTickUnit(Math.max(1, maxDataPoints / 6));
-
-        int memUpper = Math.max(memoryDataIndex, maxDataPoints);
-        memoryTimeAxis.setLowerBound(memUpper - maxDataPoints);
-        memoryTimeAxis.setUpperBound(memUpper);
-        memoryTimeAxis.setTickUnit(Math.max(1, maxDataPoints / 6));
+        updateTimeAxis(cpuTimeAxis, cpuDataIndex, maxDataPoints);
+        updateTimeAxis(memoryTimeAxis, memoryDataIndex, maxDataPoints);
     }
 
     private void updateProcessTimeAxis() {
-        int upper = Math.max(processCountDataIndex, processMaxDataPoints);
-        processCountTimeAxis.setLowerBound(upper - processMaxDataPoints);
-        processCountTimeAxis.setUpperBound(upper);
-        processCountTimeAxis.setTickUnit(Math.max(1, processMaxDataPoints / 6));
+        updateTimeAxis(processCountTimeAxis, processCountDataIndex, processMaxDataPoints);
     }
 
     // ---- Environment ----
