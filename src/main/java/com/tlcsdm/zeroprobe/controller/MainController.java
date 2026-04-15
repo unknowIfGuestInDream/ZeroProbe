@@ -11,6 +11,8 @@ import com.tlcsdm.zeroprobe.model.ConnectionConfig;
 import com.tlcsdm.zeroprobe.model.CpuInfo;
 import com.tlcsdm.zeroprobe.model.MemoryInfo;
 import com.tlcsdm.zeroprobe.model.ProcessInfo;
+import com.tlcsdm.zeroprobe.model.ProcessListInfo;
+import com.tlcsdm.zeroprobe.model.ProcessListInfo.ProcessEntry;
 import com.tlcsdm.zeroprobe.model.TimeRange;
 import com.tlcsdm.zeroprobe.service.MonitoringService;
 import com.tlcsdm.zeroprobe.transport.ConnectionProvider;
@@ -18,6 +20,7 @@ import com.tlcsdm.zeroprobe.transport.SerialConnectionProvider;
 import com.tlcsdm.zeroprobe.transport.SshConnectionProvider;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
@@ -28,13 +31,17 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
@@ -121,9 +128,27 @@ public class MainController {
 
     // Process tab
     @FXML
-    private TextField pidField;
+    private TitledPane processChartPane;
     @FXML
-    private Button monitorProcessButton;
+    private ComboBox<TimeRange> processTimeRangeCombo;
+    @FXML
+    private LineChart<Number, Number> processCountChart;
+    @FXML
+    private NumberAxis processCountTimeAxis;
+    @FXML
+    private NumberAxis processCountAxis;
+    @FXML
+    private SplitPane processSplitPane;
+    @FXML
+    private TextField processFilterField;
+    @FXML
+    private ListView<ProcessEntry> processListView;
+    @FXML
+    private Label processDetailHintLabel;
+    @FXML
+    private GridPane processDetailsGrid;
+    @FXML
+    private Label processPidLabel;
     @FXML
     private Label processNameLabel;
     @FXML
@@ -165,9 +190,14 @@ public class MainController {
 
     private XYChart.Series<Number, Number> cpuSeries;
     private XYChart.Series<Number, Number> memorySeries;
+    private XYChart.Series<Number, Number> processCountSeries;
     private int cpuDataIndex;
     private int memoryDataIndex;
+    private int processCountDataIndex;
     private volatile int maxDataPoints = DEFAULT_TIME_RANGE.getMaxDataPoints();
+    private volatile int processMaxDataPoints = DEFAULT_TIME_RANGE.getMaxDataPoints();
+    private javafx.collections.ObservableList<ProcessEntry> processListSource;
+    private FilteredList<ProcessEntry> filteredProcessList;
 
     private Cursor resizeCursor = Cursor.DEFAULT;
     private double resizeStartX;
@@ -228,6 +258,50 @@ public class MainController {
                 maxDataPoints = newVal.getMaxDataPoints();
                 trimChartData(cpuSeries);
                 trimChartData(memorySeries);
+            }
+        });
+
+        // Initialize process count chart
+        processCountSeries = new XYChart.Series<>();
+        processCountSeries.setName(I18N.get("process.processCount"));
+        processCountChart.getData().add(processCountSeries);
+        processCountChart.setCreateSymbols(false);
+        processCountChart.setAnimated(false);
+        processCountChart.setLegendVisible(false);
+
+        // Initialize process time range combo
+        processTimeRangeCombo.setItems(FXCollections.observableArrayList(TimeRange.values()));
+        processTimeRangeCombo.setValue(DEFAULT_TIME_RANGE);
+        processTimeRangeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                processMaxDataPoints = newVal.getMaxDataPoints();
+                trimChartData(processCountSeries);
+            }
+        });
+
+        // Initialize process list with filtering
+        processListSource = FXCollections.observableArrayList();
+        filteredProcessList = new FilteredList<>(processListSource, p -> true);
+        processListView.setItems(filteredProcessList);
+        processFilterField.textProperty().addListener((obs, oldVal, newVal) -> {
+            String filter = newVal == null ? "" : newVal.trim().toLowerCase();
+            filteredProcessList.setPredicate(entry -> {
+                if (filter.isEmpty()) {
+                    return true;
+                }
+                return entry.name().toLowerCase().contains(filter)
+                    || String.valueOf(entry.pid()).contains(filter);
+            });
+        });
+
+        // Process selection listener
+        processListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && monitoringService != null) {
+                monitoringService.setMonitoredPid(newVal.pid());
+                processDetailHintLabel.setVisible(false);
+                processDetailHintLabel.setManaged(false);
+                processDetailsGrid.setVisible(true);
+                processDetailsGrid.setManaged(true);
             }
         });
     }
@@ -418,11 +492,13 @@ public class MainController {
         }
         cpuDataIndex = 0;
         memoryDataIndex = 0;
+        processCountDataIndex = 0;
 
         monitoringService = new MonitoringService(connectionProvider);
         monitoringService.setOnCpuUpdate(this::handleCpuUpdate);
         monitoringService.setOnMemoryUpdate(this::handleMemoryUpdate);
         monitoringService.setOnProcessUpdate(this::handleProcessUpdate);
+        monitoringService.setOnProcessListUpdate(this::handleProcessListUpdate);
         monitoringService.setOnError(error -> Platform.runLater(() ->
             statusLabel.setText(I18N.get("status.error") + ": " + error)));
         monitoringService.start();
@@ -461,6 +537,7 @@ public class MainController {
 
     private void handleProcessUpdate(ProcessInfo procInfo) {
         Platform.runLater(() -> {
+            processPidLabel.setText(String.valueOf(procInfo.getPid()));
             processNameLabel.setText(procInfo.getName());
             processStateLabel.setText(procInfo.getState());
             processThreadsLabel.setText(String.valueOf(procInfo.getThreads()));
@@ -470,6 +547,27 @@ public class MainController {
         exportProcessIfRecording(procInfo);
     }
 
+    private void handleProcessListUpdate(ProcessListInfo listInfo) {
+        int index = processCountDataIndex++;
+        Platform.runLater(() -> {
+            // Update process count chart
+            processCountSeries.getData().add(new XYChart.Data<>(index, listInfo.getProcessCount()));
+            trimProcessChartData(processCountSeries);
+
+            // Update process list, preserving selection
+            ProcessEntry selected = processListView.getSelectionModel().getSelectedItem();
+            processListSource.setAll(listInfo.getProcesses());
+            if (selected != null) {
+                for (ProcessEntry entry : filteredProcessList) {
+                    if (entry.pid() == selected.pid()) {
+                        processListView.getSelectionModel().select(entry);
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
     private void trimChartData(XYChart.Series<Number, Number> series) {
         int excess = series.getData().size() - maxDataPoints;
         if (excess > 0) {
@@ -477,22 +575,10 @@ public class MainController {
         }
     }
 
-    // ---- Process monitoring ----
-
-    @FXML
-    public void onMonitorProcess() {
-        if (monitoringService == null) {
-            return;
-        }
-        String pidText = pidField.getText().trim();
-        if (pidText.isEmpty()) {
-            return;
-        }
-        try {
-            int pid = Integer.parseInt(pidText);
-            monitoringService.setMonitoredPid(pid);
-        } catch (NumberFormatException e) {
-            showErrorDialog(I18N.get("dialog.error.title"), "Invalid PID: " + pidText);
+    private void trimProcessChartData(XYChart.Series<Number, Number> series) {
+        int excess = series.getData().size() - processMaxDataPoints;
+        if (excess > 0) {
+            series.getData().subList(0, excess).clear();
         }
     }
 

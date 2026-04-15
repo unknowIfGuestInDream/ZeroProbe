@@ -137,6 +137,7 @@ mvn -B clean verify --no-transfer-progress
 - Avoid excessive politeness, over-explanation, or listing too many options.
 - Use direct wording and short sentences.
 - Code and comments must be in English.
+- PR  descriptions, and result summaries should be in Chinese.
 - PR replies should be in Chinese.
 
 ## Key Facts
