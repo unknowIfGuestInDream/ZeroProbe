@@ -2,6 +2,7 @@ package com.tlcsdm.zeroprobe;
 
 import com.tlcsdm.zeroprobe.config.AppSettings;
 import com.tlcsdm.zeroprobe.config.I18N;
+import com.tlcsdm.zeroprobe.config.UserPreferences;
 import com.tlcsdm.zeroprobe.controller.MainController;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -23,6 +24,8 @@ import java.io.InputStream;
 public class ZeroProbeApplication extends Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZeroProbeApplication.class);
+    private static final double DEFAULT_WIDTH = 900;
+    private static final double DEFAULT_HEIGHT = 700;
 
     private MainController controller;
     private static Stage primaryStageRef;
@@ -56,16 +59,31 @@ public class ZeroProbeApplication extends Application {
         Parent root = loader.load();
         controller = loader.getController();
 
-        Scene scene = new Scene(root, 900, 700);
+        UserPreferences.WindowState windowState = UserPreferences.loadWindowState(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        Scene scene = new Scene(root, windowState.width(), windowState.height());
 
         primaryStage.setTitle(I18N.get("app.title"));
         primaryStage.setScene(scene);
         primaryStage.setMinWidth(800);
         primaryStage.setMinHeight(600);
+        if (!Double.isNaN(windowState.x())) {
+            primaryStage.setX(windowState.x());
+        }
+        if (!Double.isNaN(windowState.y())) {
+            primaryStage.setY(windowState.y());
+        }
+        primaryStage.setMaximized(windowState.maximized());
 
         controller.setPrimaryStage(primaryStage);
 
         primaryStage.setOnCloseRequest(event -> {
+            UserPreferences.saveWindowState(new UserPreferences.WindowState(
+                primaryStage.getX(),
+                primaryStage.getY(),
+                primaryStage.getWidth(),
+                primaryStage.getHeight(),
+                primaryStage.isMaximized()
+            ));
             if (controller != null) {
                 controller.shutdown();
             }
