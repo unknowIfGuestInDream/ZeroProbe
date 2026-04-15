@@ -334,11 +334,13 @@ public class MainController {
         // Initialize time range combo
         timeRangeCombo.setItems(FXCollections.observableArrayList(TimeRange.values()));
         timeRangeCombo.setValue(DEFAULT_TIME_RANGE);
+        updateMonitorTimeAxes();
         timeRangeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 maxDataPoints = newVal.getMaxDataPoints();
                 trimChartData(cpuSeries);
                 trimChartData(memorySeries);
+                updateMonitorTimeAxes();
             }
         });
 
@@ -353,10 +355,12 @@ public class MainController {
         // Initialize process time range combo
         processTimeRangeCombo.setItems(FXCollections.observableArrayList(TimeRange.values()));
         processTimeRangeCombo.setValue(DEFAULT_TIME_RANGE);
+        updateProcessTimeAxis();
         processTimeRangeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 processMaxDataPoints = newVal.getMaxDataPoints();
                 trimChartData(processCountSeries);
+                updateProcessTimeAxis();
             }
         });
 
@@ -606,6 +610,7 @@ public class MainController {
         Platform.runLater(() -> {
             cpuSeries.getData().add(new XYChart.Data<>(index, cpuInfo.getUsagePercent()));
             trimChartData(cpuSeries);
+            updateTimeAxis(cpuTimeAxis, index, maxDataPoints);
             currentCpuLabel.setText(
                 MessageFormat.format(I18N.get("monitor.currentCpu"),
                     String.format("%.1f", cpuInfo.getUsagePercent())));
@@ -618,6 +623,7 @@ public class MainController {
         Platform.runLater(() -> {
             memorySeries.getData().add(new XYChart.Data<>(index, memInfo.getUsagePercent()));
             trimChartData(memorySeries);
+            updateTimeAxis(memoryTimeAxis, index, maxDataPoints);
             currentMemoryLabel.setText(
                 MessageFormat.format(I18N.get("monitor.currentMemory"),
                     String.format("%.1f", memInfo.getUsagePercent())));
@@ -643,6 +649,7 @@ public class MainController {
             // Update process count chart
             processCountSeries.getData().add(new XYChart.Data<>(index, listInfo.getProcessCount()));
             trimProcessChartData(processCountSeries);
+            updateTimeAxis(processCountTimeAxis, index, processMaxDataPoints);
 
             // Update process list, preserving selection
             ProcessEntry selected = processListView.getSelectionModel().getSelectedItem();
@@ -670,6 +677,32 @@ public class MainController {
         if (excess > 0) {
             series.getData().subList(0, excess).clear();
         }
+    }
+
+    private void updateTimeAxis(NumberAxis axis, int currentIndex, int range) {
+        int upper = Math.max(currentIndex, range);
+        axis.setLowerBound(upper - range);
+        axis.setUpperBound(upper);
+        axis.setTickUnit(Math.max(1, range / 6));
+    }
+
+    private void updateMonitorTimeAxes() {
+        int cpuUpper = Math.max(cpuDataIndex, maxDataPoints);
+        cpuTimeAxis.setLowerBound(cpuUpper - maxDataPoints);
+        cpuTimeAxis.setUpperBound(cpuUpper);
+        cpuTimeAxis.setTickUnit(Math.max(1, maxDataPoints / 6));
+
+        int memUpper = Math.max(memoryDataIndex, maxDataPoints);
+        memoryTimeAxis.setLowerBound(memUpper - maxDataPoints);
+        memoryTimeAxis.setUpperBound(memUpper);
+        memoryTimeAxis.setTickUnit(Math.max(1, maxDataPoints / 6));
+    }
+
+    private void updateProcessTimeAxis() {
+        int upper = Math.max(processCountDataIndex, processMaxDataPoints);
+        processCountTimeAxis.setLowerBound(upper - processMaxDataPoints);
+        processCountTimeAxis.setUpperBound(upper);
+        processCountTimeAxis.setTickUnit(Math.max(1, processMaxDataPoints / 6));
     }
 
     // ---- Environment ----
