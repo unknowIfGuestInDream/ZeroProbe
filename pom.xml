@@ -46,6 +46,7 @@
         <junit.version>6.0.3</junit.version>
         <jsch.version>2.28.0</jsch.version>
         <jserialcomm.version>2.11.4</jserialcomm.version>
+        <medusa.version>21.0.9</medusa.version>
         <mainClass>com.tlcsdm.zeroprobe.Launcher</mainClass>
     </properties>
 
@@ -144,6 +145,13 @@
             <groupId>com.fazecast</groupId>
             <artifactId>jSerialComm</artifactId>
             <version>${jserialcomm.version}</version>
+        </dependency>
+
+        <!-- Gauge UI controls -->
+        <dependency>
+            <groupId>eu.hansolo</groupId>
+            <artifactId>medusa</artifactId>
+            <version>${medusa.version}</version>
         </dependency>
 
         <!-- Test dependencies -->

@@ -7,6 +7,7 @@ module com.tlcsdm.zeroprobe {
     requires com.jcraft.jsch;
     requires com.fazecast.jSerialComm;
     requires java.prefs;
+    requires eu.hansolo.medusa;
 
     opens com.tlcsdm.zeroprobe to javafx.graphics;
     opens com.tlcsdm.zeroprobe.controller to javafx.fxml;

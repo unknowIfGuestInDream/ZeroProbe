@@ -21,6 +21,9 @@ import com.tlcsdm.zeroprobe.service.MonitoringService;
 import com.tlcsdm.zeroprobe.transport.ConnectionProvider;
 import com.tlcsdm.zeroprobe.transport.SerialConnectionProvider;
 import com.tlcsdm.zeroprobe.transport.SshConnectionProvider;
+import eu.hansolo.medusa.Gauge;
+import eu.hansolo.medusa.GaugeBuilder;
+import eu.hansolo.medusa.Section;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -54,6 +57,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.StringConverter;
@@ -133,23 +137,22 @@ public class MainController {
 
     // Monitor tab
     @FXML
-    private LineChart<Number, Number> cpuChart;
+    private HBox cpuGaugeContainer;
     @FXML
-    private NumberAxis cpuTimeAxis;
-    @FXML
-    private NumberAxis cpuUsageAxis;
-    @FXML
-    private LineChart<Number, Number> memoryChart;
-    @FXML
-    private NumberAxis memoryTimeAxis;
-    @FXML
-    private NumberAxis memoryUsageAxis;
+    private HBox memoryGaugeContainer;
     @FXML
     private Label currentCpuLabel;
     @FXML
     private Label currentMemoryLabel;
     @FXML
-    private ComboBox<TimeRange> timeRangeCombo;
+    private Label maxCpuLabel;
+    @FXML
+    private Label maxMemoryLabel;
+
+    private Gauge cpuGauge;
+    private Gauge memoryGauge;
+    private double maxCpuValue;
+    private double maxMemoryValue;
 
     // Process tab
     @FXML
@@ -283,13 +286,10 @@ public class MainController {
     private volatile boolean connected;
     private volatile boolean recording;
 
-    private XYChart.Series<Number, Number> cpuSeries;
-    private XYChart.Series<Number, Number> memorySeries;
     private XYChart.Series<Number, Number> processCountSeries;
     private int cpuDataIndex;
     private int memoryDataIndex;
     private int processCountDataIndex;
-    private volatile int maxDataPoints = DEFAULT_TIME_RANGE.getMaxDataPoints();
     private volatile int processMaxDataPoints = DEFAULT_TIME_RANGE.getMaxDataPoints();
     private javafx.collections.ObservableList<ProcessEntry> processListSource;
     private FilteredList<ProcessEntry> filteredProcessList;
@@ -335,34 +335,12 @@ public class MainController {
         serialPortCombo.setEditable(true);
         loadSavedConnectionSettings();
 
-        // Initialize charts
-        cpuSeries = new XYChart.Series<>();
-        cpuSeries.setName(I18N.get("monitor.cpu"));
-        cpuChart.getData().add(cpuSeries);
-        cpuChart.setCreateSymbols(false);
-        cpuChart.setAnimated(false);
-        cpuChart.setLegendVisible(false);
+        // Initialize gauges
+        cpuGauge = createGauge(I18N.get("monitor.cpu"), "%");
+        cpuGaugeContainer.getChildren().add(cpuGauge);
 
-        memorySeries = new XYChart.Series<>();
-        memorySeries.setName(I18N.get("monitor.memory"));
-        memoryChart.getData().add(memorySeries);
-        memoryChart.setCreateSymbols(false);
-        memoryChart.setAnimated(false);
-        memoryChart.setLegendVisible(false);
-
-        // Initialize time range combo
-        timeRangeCombo.setConverter(TIME_RANGE_CONVERTER);
-        timeRangeCombo.setItems(FXCollections.observableArrayList(TimeRange.values()));
-        timeRangeCombo.setValue(DEFAULT_TIME_RANGE);
-        updateMonitorTimeAxes();
-        timeRangeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                maxDataPoints = newVal.getMaxDataPoints();
-                trimChartData(cpuSeries);
-                trimChartData(memorySeries);
-                updateMonitorTimeAxes();
-            }
-        });
+        memoryGauge = createGauge(I18N.get("monitor.memory"), "%");
+        memoryGaugeContainer.getChildren().add(memoryGauge);
 
         // Initialize process count chart
         processCountSeries = new XYChart.Series<>();
@@ -380,7 +358,7 @@ public class MainController {
         processTimeRangeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 processMaxDataPoints = newVal.getMaxDataPoints();
-                trimChartData(processCountSeries);
+                trimChartData(processCountSeries, processMaxDataPoints);
                 updateProcessTimeAxis();
             }
         });
@@ -632,6 +610,8 @@ public class MainController {
         cpuDataIndex = 0;
         memoryDataIndex = 0;
         processCountDataIndex = 0;
+        maxCpuValue = 0;
+        maxMemoryValue = 0;
 
         monitoringService = new MonitoringService(connectionProvider);
         monitoringService.setOnCpuUpdate(this::handleCpuUpdate);
@@ -651,27 +631,37 @@ public class MainController {
     }
 
     private void handleCpuUpdate(CpuInfo cpuInfo) {
-        int index = cpuDataIndex++;
+        cpuDataIndex++;
+        double usage = cpuInfo.getUsagePercent();
+        if (usage > maxCpuValue) {
+            maxCpuValue = usage;
+        }
         Platform.runLater(() -> {
-            cpuSeries.getData().add(new XYChart.Data<>(index, cpuInfo.getUsagePercent()));
-            trimChartData(cpuSeries);
-            updateTimeAxis(cpuTimeAxis, index, maxDataPoints);
+            cpuGauge.setValue(usage);
             currentCpuLabel.setText(
                 MessageFormat.format(I18N.get("monitor.currentCpu"),
-                    String.format("%.1f", cpuInfo.getUsagePercent())));
+                    String.format("%.1f", usage)));
+            maxCpuLabel.setText(
+                MessageFormat.format(I18N.get("monitor.maxCpu"),
+                    String.format("%.1f", maxCpuValue)));
         });
         exportCpuIfRecording(cpuInfo);
     }
 
     private void handleMemoryUpdate(MemoryInfo memInfo) {
-        int index = memoryDataIndex++;
+        memoryDataIndex++;
+        double usage = memInfo.getUsagePercent();
+        if (usage > maxMemoryValue) {
+            maxMemoryValue = usage;
+        }
         Platform.runLater(() -> {
-            memorySeries.getData().add(new XYChart.Data<>(index, memInfo.getUsagePercent()));
-            trimChartData(memorySeries);
-            updateTimeAxis(memoryTimeAxis, index, maxDataPoints);
+            memoryGauge.setValue(usage);
             currentMemoryLabel.setText(
                 MessageFormat.format(I18N.get("monitor.currentMemory"),
-                    String.format("%.1f", memInfo.getUsagePercent())));
+                    String.format("%.1f", usage)));
+            maxMemoryLabel.setText(
+                MessageFormat.format(I18N.get("monitor.maxMemory"),
+                    String.format("%.1f", maxMemoryValue)));
         });
         exportMemoryIfRecording(memInfo);
     }
@@ -714,20 +704,13 @@ public class MainController {
         // Update chart data separately to avoid blocking list/detail refresh
         Platform.runLater(() -> {
             processCountSeries.getData().add(new XYChart.Data<>(index, listInfo.getProcessCount()));
-            trimProcessChartData(processCountSeries);
+            trimChartData(processCountSeries, processMaxDataPoints);
             updateTimeAxis(processCountTimeAxis, index, processMaxDataPoints);
         });
     }
 
-    private void trimChartData(XYChart.Series<Number, Number> series) {
-        int excess = series.getData().size() - maxDataPoints;
-        if (excess > 0) {
-            series.getData().subList(0, excess).clear();
-        }
-    }
-
-    private void trimProcessChartData(XYChart.Series<Number, Number> series) {
-        int excess = series.getData().size() - processMaxDataPoints;
+    private void trimChartData(XYChart.Series<Number, Number> series, int maxPoints) {
+        int excess = series.getData().size() - maxPoints;
         if (excess > 0) {
             series.getData().subList(0, excess).clear();
         }
@@ -742,13 +725,35 @@ public class MainController {
         axis.setTickUnit(Math.max(1, range / TICK_DIVISIONS));
     }
 
-    private void updateMonitorTimeAxes() {
-        updateTimeAxis(cpuTimeAxis, cpuDataIndex, maxDataPoints);
-        updateTimeAxis(memoryTimeAxis, memoryDataIndex, maxDataPoints);
-    }
-
     private void updateProcessTimeAxis() {
         updateTimeAxis(processCountTimeAxis, processCountDataIndex, processMaxDataPoints);
+    }
+
+    private Gauge createGauge(String title, String unit) {
+        return GaugeBuilder.create()
+            .skinType(Gauge.SkinType.GAUGE)
+            .title(title)
+            .unit(unit)
+            .minValue(0)
+            .maxValue(100)
+            .animated(true)
+            .animationDuration(500)
+            .startAngle(320)
+            .angleRange(280)
+            .sectionsVisible(true)
+            .sections(
+                new Section(0, 60, Color.rgb(0, 200, 0, 0.75)),
+                new Section(60, 80, Color.rgb(200, 200, 0, 0.75)),
+                new Section(80, 100, Color.rgb(200, 0, 0, 0.75))
+            )
+            .needleColor(Color.web("#333333"))
+            .tickLabelColor(Color.web("#333333"))
+            .titleColor(Color.web("#333333"))
+            .unitColor(Color.web("#333333"))
+            .valueColor(Color.web("#333333"))
+            .minSize(200, 200)
+            .prefSize(300, 300)
+            .build();
     }
 
     // ---- Environment ----
