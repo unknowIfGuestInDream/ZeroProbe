@@ -2,6 +2,7 @@ package com.tlcsdm.zeroprobe.controller;
 
 import com.tlcsdm.zeroprobe.ZeroProbeApplication;
 import com.tlcsdm.zeroprobe.config.AppSettings;
+import com.tlcsdm.zeroprobe.config.AppTheme;
 import com.tlcsdm.zeroprobe.config.I18N;
 import com.tlcsdm.zeroprobe.config.UserPreferences;
 import com.tlcsdm.zeroprobe.export.DataExporter;
@@ -341,6 +342,14 @@ public class MainController {
 
         memoryGauge = createGauge(I18N.get("monitor.memory"), "%");
         memoryGaugeContainer.getChildren().add(memoryGauge);
+
+        // Update gauge colors when theme changes
+        AppSettings.getInstance().themeProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                updateGaugeColors(cpuGauge, newVal.isDark());
+                updateGaugeColors(memoryGauge, newVal.isDark());
+            }
+        });
 
         // Initialize process count chart
         processCountSeries = new XYChart.Series<>();
@@ -730,7 +739,9 @@ public class MainController {
     }
 
     private Gauge createGauge(String title, String unit) {
-        Color textColor = Color.web("#333333");
+        boolean dark = AppTheme.getSavedTheme().isDark();
+        Color textColor = dark ? Color.web("#cccccc") : Color.web("#333333");
+        Color needleCol = dark ? Color.web("#dddddd") : Color.web("#333333");
         return GaugeBuilder.create()
             .skinType(Gauge.SkinType.GAUGE)
             .title(title)
@@ -747,7 +758,7 @@ public class MainController {
                 new Section(60, 80, Color.rgb(200, 200, 0, 0.75)),
                 new Section(80, 100, Color.rgb(200, 0, 0, 0.75))
             )
-            .needleColor(textColor)
+            .needleColor(needleCol)
             .tickLabelColor(textColor)
             .titleColor(textColor)
             .unitColor(textColor)
@@ -755,6 +766,16 @@ public class MainController {
             .minSize(200, 200)
             .prefSize(300, 300)
             .build();
+    }
+
+    private void updateGaugeColors(Gauge gauge, boolean dark) {
+        Color textColor = dark ? Color.web("#cccccc") : Color.web("#333333");
+        Color needleCol = dark ? Color.web("#dddddd") : Color.web("#333333");
+        gauge.setNeedleColor(needleCol);
+        gauge.setTickLabelColor(textColor);
+        gauge.setTitleColor(textColor);
+        gauge.setUnitColor(textColor);
+        gauge.setValueColor(textColor);
     }
 
     // ---- Environment ----
