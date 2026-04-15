@@ -707,13 +707,12 @@ public class MainController {
         hostField.setText(state.host());
         portField.setText(String.valueOf(state.port()));
         usernameField.setText(state.username());
-        passwordField.setText(state.password());
+        passwordField.clear();
         serialPortCombo.setValue(state.serialPort());
         baudRateCombo.setValue(String.valueOf(state.baudRate()));
-        if (state.type() == ConnectionConfig.ConnectionType.SERIAL) {
-            serialRadio.setSelected(true);
-        } else {
-            sshRadio.setSelected(true);
+        switch (state.type()) {
+            case SERIAL -> serialRadio.setSelected(true);
+            case SSH -> sshRadio.setSelected(true);
         }
     }
 
@@ -723,7 +722,6 @@ public class MainController {
             hostField.getText(),
             parseIntOrDefault(portField.getText(), 22),
             usernameField.getText(),
-            passwordField.getText(),
             serialPortCombo.getValue(),
             parseIntOrDefault(baudRateCombo.getValue(), 115200)
         ));
@@ -747,7 +745,13 @@ public class MainController {
             .filter(name -> name != null && !name.isBlank())
             .distinct()
             .toList();
-        serialPortCombo.setItems(FXCollections.observableArrayList(ports));
+        var updatedItems = FXCollections.observableArrayList(ports);
+        if (currentValue != null && !currentValue.isBlank()) {
+            if (!updatedItems.contains(currentValue)) {
+                updatedItems.add(0, currentValue);
+            }
+        }
+        serialPortCombo.setItems(updatedItems);
         if (currentValue != null && !currentValue.isBlank()) {
             serialPortCombo.setValue(currentValue);
         } else if (!ports.isEmpty()) {

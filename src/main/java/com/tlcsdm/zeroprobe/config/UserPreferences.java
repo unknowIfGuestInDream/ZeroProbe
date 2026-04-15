@@ -21,7 +21,6 @@ public final class UserPreferences {
     private static final String KEY_CONNECTION_HOST = "connection.host";
     private static final String KEY_CONNECTION_PORT = "connection.port";
     private static final String KEY_CONNECTION_USERNAME = "connection.username";
-    private static final String KEY_CONNECTION_PASSWORD = "connection.password";
     private static final String KEY_CONNECTION_SERIAL_PORT = "connection.serialPort";
     private static final String KEY_CONNECTION_BAUD_RATE = "connection.baudRate";
 
@@ -61,7 +60,6 @@ public final class UserPreferences {
             PREFS.get(KEY_CONNECTION_HOST, defaults.getHost()),
             PREFS.getInt(KEY_CONNECTION_PORT, defaults.getPort()),
             PREFS.get(KEY_CONNECTION_USERNAME, defaults.getUsername()),
-            PREFS.get(KEY_CONNECTION_PASSWORD, defaults.getPassword()),
             PREFS.get(KEY_CONNECTION_SERIAL_PORT, defaults.getSerialPort()),
             PREFS.getInt(KEY_CONNECTION_BAUD_RATE, defaults.getBaudRate())
         );
@@ -72,7 +70,6 @@ public final class UserPreferences {
         PREFS.put(KEY_CONNECTION_HOST, state.host() == null ? "" : state.host());
         PREFS.putInt(KEY_CONNECTION_PORT, state.port());
         PREFS.put(KEY_CONNECTION_USERNAME, state.username() == null ? "" : state.username());
-        PREFS.put(KEY_CONNECTION_PASSWORD, state.password() == null ? "" : state.password());
         PREFS.put(KEY_CONNECTION_SERIAL_PORT, state.serialPort() == null ? "" : state.serialPort());
         PREFS.putInt(KEY_CONNECTION_BAUD_RATE, state.baudRate());
     }
@@ -80,7 +77,7 @@ public final class UserPreferences {
     public record WindowState(double x, double y, double width, double height, boolean maximized) {
     }
 
-    public record ConnectionState(ConnectionConfig.ConnectionType type, String host, int port,
-                                  String username, String password, String serialPort, int baudRate) {
+    public record ConnectionState(ConnectionConfig.ConnectionType type, String host, int port, String username,
+                                  String serialPort, int baudRate) {
     }
 }

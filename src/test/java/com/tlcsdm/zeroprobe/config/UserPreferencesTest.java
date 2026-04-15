@@ -4,7 +4,6 @@ import com.tlcsdm.zeroprobe.model.ConnectionConfig;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class UserPreferencesTest {
 
@@ -28,7 +27,6 @@ class UserPreferencesTest {
             "192.168.8.1",
             2222,
             "admin",
-            "secret",
             "COM9",
             57600
         );
@@ -39,9 +37,7 @@ class UserPreferencesTest {
         assertEquals(expected.host(), actual.host());
         assertEquals(expected.port(), actual.port());
         assertEquals(expected.username(), actual.username());
-        assertEquals(expected.password(), actual.password());
         assertEquals(expected.serialPort(), actual.serialPort());
         assertEquals(expected.baudRate(), actual.baudRate());
-        assertFalse(actual.serialPort().isBlank());
     }
 }
