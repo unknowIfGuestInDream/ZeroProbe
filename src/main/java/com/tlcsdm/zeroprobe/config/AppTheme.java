@@ -1,5 +1,8 @@
 package com.tlcsdm.zeroprobe.config;
 
+import atlantafx.base.theme.CupertinoDark;
+import atlantafx.base.theme.CupertinoLight;
+import atlantafx.base.theme.Dracula;
 import atlantafx.base.theme.NordDark;
 import atlantafx.base.theme.NordLight;
 import atlantafx.base.theme.PrimerDark;
@@ -19,7 +22,10 @@ public enum AppTheme {
     ATLANTAFX_PRIMER_LIGHT("settings.theme.atlantafx.primerLight", PrimerLight::new),
     ATLANTAFX_PRIMER_DARK("settings.theme.atlantafx.primerDark", PrimerDark::new),
     ATLANTAFX_NORD_LIGHT("settings.theme.atlantafx.nordLight", NordLight::new),
-    ATLANTAFX_NORD_DARK("settings.theme.atlantafx.nordDark", NordDark::new);
+    ATLANTAFX_NORD_DARK("settings.theme.atlantafx.nordDark", NordDark::new),
+    ATLANTAFX_CUPERTINO_LIGHT("settings.theme.atlantafx.cupertinoLight", CupertinoLight::new),
+    ATLANTAFX_CUPERTINO_DARK("settings.theme.atlantafx.cupertinoDark", CupertinoDark::new),
+    ATLANTAFX_DRACULA("settings.theme.atlantafx.dracula", Dracula::new);
 
     private static final String PREF_KEY_THEME = "theme";
     private static final Preferences PREFS = Preferences.userNodeForPackage(AppTheme.class);
