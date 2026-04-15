@@ -730,6 +730,7 @@ public class MainController {
     }
 
     private Gauge createGauge(String title, String unit) {
+        Color textColor = Color.web("#333333");
         return GaugeBuilder.create()
             .skinType(Gauge.SkinType.GAUGE)
             .title(title)
@@ -746,11 +747,11 @@ public class MainController {
                 new Section(60, 80, Color.rgb(200, 200, 0, 0.75)),
                 new Section(80, 100, Color.rgb(200, 0, 0, 0.75))
             )
-            .needleColor(Color.web("#333333"))
-            .tickLabelColor(Color.web("#333333"))
-            .titleColor(Color.web("#333333"))
-            .unitColor(Color.web("#333333"))
-            .valueColor(Color.web("#333333"))
+            .needleColor(textColor)
+            .tickLabelColor(textColor)
+            .titleColor(textColor)
+            .unitColor(textColor)
+            .valueColor(textColor)
             .minSize(200, 200)
             .prefSize(300, 300)
             .build();
