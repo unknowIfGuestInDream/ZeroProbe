@@ -34,7 +34,8 @@ class MonitoringServiceTest {
             service.stop();
             provider.disconnect();
 
-            TimeUnit.MILLISECONDS.sleep(200);
+            assertTrue(provider.awaitProcessListFinished(),
+                "Interrupted process list collection should finish promptly");
 
             assertTrue(errors.isEmpty(), "Expected no error callback during shutdown");
             assertFalse(provider.processDetailCommandCalled.get(),
@@ -46,6 +47,8 @@ class MonitoringServiceTest {
 
     private static final class FakeConnectionProvider implements ConnectionProvider {
         private final CountDownLatch processListStarted = new CountDownLatch(1);
+        private final CountDownLatch processListFinished = new CountDownLatch(1);
+        private final CountDownLatch processListBlocker = new CountDownLatch(1);
         private final AtomicBoolean connected = new AtomicBoolean(true);
         private final AtomicBoolean processDetailCommandCalled = new AtomicBoolean(false);
 
@@ -73,8 +76,12 @@ class MonitoringServiceTest {
             }
             if (command.startsWith("for d in /proc/[0-9]*")) {
                 processListStarted.countDown();
-                Thread.sleep(5000);
-                return "";
+                try {
+                    processListBlocker.await(5, TimeUnit.SECONDS);
+                    return "";
+                } finally {
+                    processListFinished.countDown();
+                }
             }
             if (command.startsWith("cat /proc/11/")) {
                 processDetailCommandCalled.set(true);
@@ -95,6 +102,10 @@ class MonitoringServiceTest {
 
         private boolean awaitProcessListStarted() throws InterruptedException {
             return processListStarted.await(2, TimeUnit.SECONDS);
+        }
+
+        private boolean awaitProcessListFinished() throws InterruptedException {
+            return processListFinished.await(2, TimeUnit.SECONDS);
         }
     }
 }

@@ -93,19 +93,19 @@ public class MonitoringService {
      * Perform a single data collection cycle.
      */
     private void collectData() {
-        if (!shouldCollect()) {
+        if (!shouldContinueCollection()) {
             return;
         }
         collectCpu();
-        if (!shouldCollect()) {
+        if (!shouldContinueCollection()) {
             return;
         }
         collectMemory();
-        if (!shouldCollect()) {
+        if (!shouldContinueCollection()) {
             return;
         }
         collectProcessList();
-        if (!shouldCollect()) {
+        if (!shouldContinueCollection()) {
             return;
         }
         collectProcess();
@@ -185,7 +185,7 @@ public class MonitoringService {
         }
     }
 
-    private boolean shouldCollect() {
+    private boolean shouldContinueCollection() {
         return !stopping && !Thread.currentThread().isInterrupted();
     }
 
@@ -198,8 +198,7 @@ public class MonitoringService {
             log.debug("{} collection interrupted during shutdown", metric);
             return true;
         }
-        if (!connectionProvider.isConnected()
-            || (e instanceof IllegalStateException && "Not connected".equals(e.getMessage()))) {
+        if (!connectionProvider.isConnected()) {
             log.debug("{} collection skipped during shutdown: {}", metric, e.getMessage());
             return true;
         }
