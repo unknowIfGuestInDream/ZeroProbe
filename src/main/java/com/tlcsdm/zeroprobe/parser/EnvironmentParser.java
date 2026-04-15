@@ -31,7 +31,14 @@ public class EnvironmentParser {
         if (output == null || output.isBlank()) {
             return "";
         }
-        return output.trim();
+        for (String line : output.split("\n")) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty()) {
+                int firstSpace = trimmed.indexOf(' ');
+                return firstSpace > 0 ? trimmed.substring(0, firstSpace) : trimmed;
+            }
+        }
+        return "";
     }
 
     /**
@@ -69,7 +76,14 @@ public class EnvironmentParser {
         if (output == null || output.isBlank()) {
             return "";
         }
-        return output.trim();
+        for (String line : output.split("\n")) {
+            String trimmed = line.trim();
+            if (!trimmed.isEmpty()) {
+                int firstSpace = trimmed.indexOf(' ');
+                return firstSpace > 0 ? trimmed.substring(0, firstSpace) : trimmed;
+            }
+        }
+        return "";
     }
 
     /**

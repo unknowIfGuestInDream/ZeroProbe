@@ -26,6 +26,7 @@ class EnvironmentParserTest {
     @Test
     void testParseKernelVersion() {
         assertEquals("5.10.0-arm64", parser.parseKernelVersion("5.10.0-arm64\n"));
+        assertEquals("6.6.0", parser.parseKernelVersion("\n  6.6.0 build-info\n"));
         assertEquals("", parser.parseKernelVersion(null));
         assertEquals("", parser.parseKernelVersion(""));
     }
@@ -62,6 +63,7 @@ class EnvironmentParserTest {
     void testParseArchitecture() {
         assertEquals("aarch64", parser.parseArchitecture("aarch64\n"));
         assertEquals("armv7l", parser.parseArchitecture("armv7l"));
+        assertEquals("x86_64", parser.parseArchitecture("\n x86_64 GNU/Linux\n"));
         assertEquals("", parser.parseArchitecture(null));
     }
 
