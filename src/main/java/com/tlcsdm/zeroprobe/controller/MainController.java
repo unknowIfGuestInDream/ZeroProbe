@@ -11,6 +11,7 @@ import com.tlcsdm.zeroprobe.model.ConnectionConfig;
 import com.tlcsdm.zeroprobe.model.CpuInfo;
 import com.tlcsdm.zeroprobe.model.MemoryInfo;
 import com.tlcsdm.zeroprobe.model.ProcessInfo;
+import com.tlcsdm.zeroprobe.model.TimeRange;
 import com.tlcsdm.zeroprobe.service.MonitoringService;
 import com.tlcsdm.zeroprobe.transport.ConnectionProvider;
 import com.tlcsdm.zeroprobe.transport.SerialConnectionProvider;
@@ -32,6 +33,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
@@ -51,7 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MainController {
 
     private static final Logger LOG = LoggerFactory.getLogger(MainController.class);
-    private static final int MAX_DATA_POINTS = 60;
+    private static final TimeRange DEFAULT_TIME_RANGE = TimeRange.MIN_1;
 
     // Window controls
     @FXML
@@ -114,6 +116,8 @@ public class MainController {
     private Label currentCpuLabel;
     @FXML
     private Label currentMemoryLabel;
+    @FXML
+    private ComboBox<TimeRange> timeRangeCombo;
 
     // Process tab
     @FXML
@@ -163,6 +167,7 @@ public class MainController {
     private XYChart.Series<Number, Number> memorySeries;
     private int cpuDataIndex;
     private int memoryDataIndex;
+    private volatile int maxDataPoints = DEFAULT_TIME_RANGE.getMaxDataPoints();
 
     private Cursor resizeCursor = Cursor.DEFAULT;
     private double resizeStartX;
@@ -214,6 +219,17 @@ public class MainController {
         memoryChart.setCreateSymbols(false);
         memoryChart.setAnimated(false);
         memoryChart.setLegendVisible(false);
+
+        // Initialize time range combo
+        timeRangeCombo.setItems(FXCollections.observableArrayList(TimeRange.values()));
+        timeRangeCombo.setValue(DEFAULT_TIME_RANGE);
+        timeRangeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                maxDataPoints = newVal.getMaxDataPoints();
+                trimChartData(cpuSeries);
+                trimChartData(memorySeries);
+            }
+        });
     }
 
     /**
@@ -423,9 +439,7 @@ public class MainController {
         int index = cpuDataIndex++;
         Platform.runLater(() -> {
             cpuSeries.getData().add(new XYChart.Data<>(index, cpuInfo.getUsagePercent()));
-            if (cpuSeries.getData().size() > MAX_DATA_POINTS) {
-                cpuSeries.getData().remove(0);
-            }
+            trimChartData(cpuSeries);
             currentCpuLabel.setText(
                 MessageFormat.format(I18N.get("monitor.currentCpu"),
                     String.format("%.1f", cpuInfo.getUsagePercent())));
@@ -437,9 +451,7 @@ public class MainController {
         int index = memoryDataIndex++;
         Platform.runLater(() -> {
             memorySeries.getData().add(new XYChart.Data<>(index, memInfo.getUsagePercent()));
-            if (memorySeries.getData().size() > MAX_DATA_POINTS) {
-                memorySeries.getData().remove(0);
-            }
+            trimChartData(memorySeries);
             currentMemoryLabel.setText(
                 MessageFormat.format(I18N.get("monitor.currentMemory"),
                     String.format("%.1f", memInfo.getUsagePercent())));
@@ -456,6 +468,13 @@ public class MainController {
             processCpuTimeLabel.setText(procInfo.getUtime() + " / " + procInfo.getStime());
         });
         exportProcessIfRecording(procInfo);
+    }
+
+    private void trimChartData(XYChart.Series<Number, Number> series) {
+        int limit = maxDataPoints;
+        while (series.getData().size() > limit) {
+            series.getData().removeFirst();
+        }
     }
 
     // ---- Process monitoring ----
@@ -580,6 +599,10 @@ public class MainController {
                     Stage s = (Stage) w;
                     s.setHeight(450);
                     s.centerOnScreen();
+                    Image logo = ZeroProbeApplication.loadLogo();
+                    if (logo != null) {
+                        s.getIcons().add(logo);
+                    }
                 })
         );
         AppSettings.getInstance().getPreferencesFx().show(true);

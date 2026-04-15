@@ -148,7 +148,11 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <HBox spacing="10" HBox.hgrow="ALWAYS">
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="%monitor.timeRange" style="-fx-font-weight: bold;"/>
+                        <ComboBox fx:id="timeRangeCombo"/>
+                    </HBox>
+                    <HBox spacing="10" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                         <LineChart fx:id="cpuChart" title="%monitor.cpuChart" HBox.hgrow="ALWAYS" prefHeight="400">
                             <xAxis>
                                 <NumberAxis fx:id="cpuTimeAxis" label="%monitor.timeAxis" autoRanging="true"/>
