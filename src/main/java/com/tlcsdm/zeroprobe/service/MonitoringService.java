@@ -141,11 +141,13 @@ public class MonitoringService {
         }
     }
 
+    private static final String PROCESS_LIST_CMD =
+        "for d in /proc/[0-9]*; do pid=$(basename $d); "
+            + "[ -f $d/comm ] && echo \"$pid $(cat $d/comm 2>/dev/null)\"; done";
+
     private void collectProcessList() {
         try {
-            String output = connectionProvider.executeCommand(
-                "for d in /proc/[0-9]*; do pid=$(basename $d); "
-                    + "[ -f $d/comm ] && echo \"$pid $(cat $d/comm 2>/dev/null)\"; done");
+            String output = connectionProvider.executeCommand(PROCESS_LIST_CMD);
             ProcessListInfo listInfo = processListParser.parse(output);
             if (listInfo != null && onProcessListUpdate != null) {
                 onProcessListUpdate.accept(listInfo);
