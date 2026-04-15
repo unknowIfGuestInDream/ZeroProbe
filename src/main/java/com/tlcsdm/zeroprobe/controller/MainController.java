@@ -260,6 +260,18 @@ public class MainController {
     @FXML
     private TextArea fileBrowserContentArea;
 
+    // Terminal tab
+    @FXML
+    private TextField terminalCommandField;
+    @FXML
+    private Button terminalExecuteButton;
+    @FXML
+    private Button terminalClearButton;
+    @FXML
+    private Label terminalStatusLabel;
+    @FXML
+    private TextArea terminalOutputArea;
+
     private Stage primaryStage;
     private double dragOffsetX;
     private double dragOffsetY;
@@ -575,6 +587,7 @@ public class MainController {
         statusLabel.setText(I18N.get("status.disconnected"));
         clearEnvironmentTab();
         clearFileBrowserTab();
+        clearTerminalTab();
     }
 
     private ConnectionConfig buildConnectionConfig() {
@@ -1012,6 +1025,65 @@ public class MainController {
         stopFileAutoRefresh();
         fileBrowserAutoRefreshCheck.setSelected(false);
         selectedFileEntry = null;
+    }
+
+    // ---- Terminal ----
+
+    @FXML
+    public void onExecuteCommand() {
+        String command = terminalCommandField.getText().trim();
+        if (command.isEmpty()) {
+            return;
+        }
+        if (!connected || connectionProvider == null) {
+            terminalStatusLabel.setText(I18N.get("terminal.notConnected"));
+            return;
+        }
+
+        terminalExecuteButton.setDisable(true);
+        terminalStatusLabel.setText(I18N.get("terminal.executing"));
+
+        ConnectionProvider provider = connectionProvider;
+        Thread thread = new Thread(() -> {
+            try {
+                String output = provider.executeCommand(command);
+                Platform.runLater(() -> {
+                    terminalOutputArea.appendText("$ " + command + "\n");
+                    if (output != null && !output.isEmpty()) {
+                        terminalOutputArea.appendText(output);
+                        if (!output.endsWith("\n")) {
+                            terminalOutputArea.appendText("\n");
+                        }
+                    }
+                    terminalOutputArea.appendText("\n");
+                    terminalStatusLabel.setText("");
+                    terminalExecuteButton.setDisable(false);
+                    terminalCommandField.clear();
+                    terminalCommandField.requestFocus();
+                });
+            } catch (Exception e) {
+                LOG.error("Failed to execute command: {}", command, e);
+                Platform.runLater(() -> {
+                    terminalOutputArea.appendText("$ " + command + "\n");
+                    terminalOutputArea.appendText(I18N.get("status.error") + ": " + e.getMessage() + "\n\n");
+                    terminalStatusLabel.setText(I18N.get("status.error") + ": " + e.getMessage());
+                    terminalExecuteButton.setDisable(false);
+                });
+            }
+        }, "zeroprobe-terminal");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    @FXML
+    public void onClearTerminal() {
+        terminalOutputArea.clear();
+    }
+
+    private void clearTerminalTab() {
+        terminalOutputArea.clear();
+        terminalCommandField.clear();
+        terminalStatusLabel.setText(I18N.get("terminal.notConnected"));
     }
 
     // ---- Recording ----

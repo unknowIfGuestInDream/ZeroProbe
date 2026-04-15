@@ -348,6 +348,25 @@
                 </VBox>
             </Tab>
 
+            <!-- Terminal Tab -->
+            <Tab text="%tab.terminal" closable="false">
+                <VBox spacing="10">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="%terminal.command" style="-fx-font-weight: bold;"/>
+                        <TextField fx:id="terminalCommandField" promptText="%terminal.commandHint"
+                                   HBox.hgrow="ALWAYS" onAction="#onExecuteCommand"/>
+                        <Button fx:id="terminalExecuteButton" text="%terminal.execute" onAction="#onExecuteCommand"/>
+                        <Button fx:id="terminalClearButton" text="%terminal.clear" onAction="#onClearTerminal"/>
+                    </HBox>
+                    <Label fx:id="terminalStatusLabel" text="%terminal.notConnected"/>
+                    <TextArea fx:id="terminalOutputArea" editable="false" wrapText="true"
+                              style="-fx-font-family: monospace;" VBox.vgrow="ALWAYS"/>
+                </VBox>
+            </Tab>
+
             <!-- Recording Tab -->
             <Tab text="%tab.recording" closable="false">
                 <VBox spacing="15">
