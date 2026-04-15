@@ -16,6 +16,7 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.control.ToggleGroup?>
@@ -237,6 +238,57 @@
                             </GridPane>
                         </VBox>
                     </SplitPane>
+                </VBox>
+            </Tab>
+
+            <!-- Environment Tab -->
+            <Tab text="%tab.environment" closable="false">
+                <VBox spacing="10">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="envRefreshButton" text="%environment.refresh" onAction="#onRefreshEnvironment"/>
+                        <Label fx:id="envStatusLabel" text="%environment.notConnected"/>
+                    </HBox>
+
+                    <!-- System Information -->
+                    <TitledPane text="%environment.systemInfo" animated="false" collapsible="false">
+                        <GridPane hgap="10" vgap="8">
+                            <padding>
+                                <Insets top="10" right="10" bottom="10" left="10"/>
+                            </padding>
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="120" prefWidth="150"/>
+                                <ColumnConstraints hgrow="ALWAYS" prefWidth="400"/>
+                            </columnConstraints>
+                            <Label text="%environment.hostname" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="envHostnameField" editable="false"
+                                       style="-fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0;"
+                                       GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="%environment.kernel" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="envKernelField" editable="false"
+                                       style="-fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0;"
+                                       GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="%environment.os" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <TextField fx:id="envOsField" editable="false"
+                                       style="-fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0;"
+                                       GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <Label text="%environment.architecture" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                            <TextField fx:id="envArchField" editable="false"
+                                       style="-fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0;"
+                                       GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                            <Label text="%environment.uptime" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                            <TextField fx:id="envUptimeField" editable="false"
+                                       style="-fx-background-color: transparent; -fx-border-width: 0; -fx-padding: 0;"
+                                       GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <!-- Environment Variables -->
+                    <TitledPane text="%environment.envVars" animated="false" VBox.vgrow="ALWAYS">
+                        <TableView fx:id="envVarsTable" VBox.vgrow="ALWAYS"/>
+                    </TitledPane>
                 </VBox>
             </Tab>
 

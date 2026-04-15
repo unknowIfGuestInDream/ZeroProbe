@@ -9,16 +9,19 @@ import com.tlcsdm.zeroprobe.export.DataExporter;
 import com.fazecast.jSerialComm.SerialPort;
 import com.tlcsdm.zeroprobe.model.ConnectionConfig;
 import com.tlcsdm.zeroprobe.model.CpuInfo;
+import com.tlcsdm.zeroprobe.model.EnvironmentInfo;
 import com.tlcsdm.zeroprobe.model.MemoryInfo;
 import com.tlcsdm.zeroprobe.model.ProcessInfo;
 import com.tlcsdm.zeroprobe.model.ProcessListInfo;
 import com.tlcsdm.zeroprobe.model.ProcessListInfo.ProcessEntry;
 import com.tlcsdm.zeroprobe.model.TimeRange;
+import com.tlcsdm.zeroprobe.parser.EnvironmentParser;
 import com.tlcsdm.zeroprobe.service.MonitoringService;
 import com.tlcsdm.zeroprobe.transport.ConnectionProvider;
 import com.tlcsdm.zeroprobe.transport.SerialConnectionProvider;
 import com.tlcsdm.zeroprobe.transport.SshConnectionProvider;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
@@ -36,6 +39,8 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleGroup;
@@ -52,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -171,6 +177,24 @@ public class MainController {
     private Label recordingStatusLabel;
     @FXML
     private Label sampleCountLabel;
+
+    // Environment tab
+    @FXML
+    private Button envRefreshButton;
+    @FXML
+    private Label envStatusLabel;
+    @FXML
+    private TextField envHostnameField;
+    @FXML
+    private TextField envKernelField;
+    @FXML
+    private TextField envOsField;
+    @FXML
+    private TextField envArchField;
+    @FXML
+    private TextField envUptimeField;
+    @FXML
+    private TableView<Map.Entry<String, String>> envVarsTable;
 
     private Stage primaryStage;
     private double dragOffsetX;
@@ -304,6 +328,9 @@ public class MainController {
                 processDetailsGrid.setManaged(true);
             }
         });
+
+        // Initialize environment variables table columns
+        initEnvironmentTable();
     }
 
     /**
@@ -434,6 +461,7 @@ public class MainController {
                             MessageFormat.format(I18N.get("connection.status.connected"), config.toString()));
                         statusLabel.setText(I18N.get("status.connected"));
                         startMonitoring();
+                        onRefreshEnvironment();
                     });
                 } catch (Exception e) {
                     LOG.error("Connection failed", e);
@@ -466,6 +494,7 @@ public class MainController {
         disconnectButton.setDisable(true);
         connectionStatusLabel.setText(I18N.get("connection.status.disconnected"));
         statusLabel.setText(I18N.get("status.disconnected"));
+        clearEnvironmentTab();
     }
 
     private ConnectionConfig buildConnectionConfig() {
@@ -580,6 +609,78 @@ public class MainController {
         if (excess > 0) {
             series.getData().subList(0, excess).clear();
         }
+    }
+
+    // ---- Environment ----
+
+    private final EnvironmentParser environmentParser = new EnvironmentParser();
+
+    @SuppressWarnings("unchecked")
+    private void initEnvironmentTable() {
+        TableColumn<Map.Entry<String, String>, String> nameCol = new TableColumn<>(I18N.get("environment.envVars.name"));
+        nameCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getKey()));
+        nameCol.setPrefWidth(200);
+
+        TableColumn<Map.Entry<String, String>, String> valueCol = new TableColumn<>(I18N.get("environment.envVars.value"));
+        valueCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getValue()));
+        valueCol.setPrefWidth(500);
+
+        envVarsTable.getColumns().setAll(nameCol, valueCol);
+    }
+
+    @FXML
+    public void onRefreshEnvironment() {
+        if (!connected || connectionProvider == null) {
+            envStatusLabel.setText(I18N.get("environment.notConnected"));
+            return;
+        }
+
+        envRefreshButton.setDisable(true);
+        envStatusLabel.setText(I18N.get("status.connecting"));
+
+        Thread envThread = new Thread(() -> {
+            try {
+                String hostname = connectionProvider.executeCommand("hostname");
+                String kernel = connectionProvider.executeCommand("uname -r");
+                String osRelease = connectionProvider.executeCommand("cat /etc/os-release");
+                String arch = connectionProvider.executeCommand("uname -m");
+                String uptime = connectionProvider.executeCommand("cat /proc/uptime");
+                String envOutput = connectionProvider.executeCommand("env");
+
+                EnvironmentInfo info = environmentParser.buildEnvironmentInfo(
+                    hostname, kernel, osRelease, arch, uptime, envOutput);
+
+                Platform.runLater(() -> {
+                    envHostnameField.setText(info.getHostname());
+                    envKernelField.setText(info.getKernelVersion());
+                    envOsField.setText(info.getOsName());
+                    envArchField.setText(info.getArchitecture());
+                    envUptimeField.setText(info.getUptime());
+                    envVarsTable.setItems(FXCollections.observableArrayList(
+                        info.getEnvironmentVariables().entrySet()));
+                    envStatusLabel.setText("");
+                    envRefreshButton.setDisable(false);
+                });
+            } catch (Exception e) {
+                LOG.error("Failed to collect environment info", e);
+                Platform.runLater(() -> {
+                    envStatusLabel.setText(I18N.get("status.error") + ": " + e.getMessage());
+                    envRefreshButton.setDisable(false);
+                });
+            }
+        }, "zeroprobe-env");
+        envThread.setDaemon(true);
+        envThread.start();
+    }
+
+    private void clearEnvironmentTab() {
+        envHostnameField.setText("");
+        envKernelField.setText("");
+        envOsField.setText("");
+        envArchField.setText("");
+        envUptimeField.setText("");
+        envVarsTable.getItems().clear();
+        envStatusLabel.setText(I18N.get("environment.notConnected"));
     }
 
     // ---- Recording ----
