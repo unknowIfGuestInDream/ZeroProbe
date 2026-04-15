@@ -3,8 +3,10 @@ package com.tlcsdm.zeroprobe.service;
 import com.tlcsdm.zeroprobe.model.CpuInfo;
 import com.tlcsdm.zeroprobe.model.MemoryInfo;
 import com.tlcsdm.zeroprobe.model.ProcessInfo;
+import com.tlcsdm.zeroprobe.model.ProcessListInfo;
 import com.tlcsdm.zeroprobe.parser.CpuParser;
 import com.tlcsdm.zeroprobe.parser.MemoryParser;
+import com.tlcsdm.zeroprobe.parser.ProcessListParser;
 import com.tlcsdm.zeroprobe.parser.ProcessParser;
 import com.tlcsdm.zeroprobe.transport.ConnectionProvider;
 import org.slf4j.Logger;
@@ -29,6 +31,7 @@ public class MonitoringService {
     private final CpuParser cpuParser = new CpuParser();
     private final MemoryParser memoryParser = new MemoryParser();
     private final ProcessParser processParser = new ProcessParser();
+    private final ProcessListParser processListParser = new ProcessListParser();
 
     private ScheduledExecutorService scheduler;
     private volatile int monitoredPid = -1;
@@ -36,6 +39,7 @@ public class MonitoringService {
     private Consumer<CpuInfo> onCpuUpdate;
     private Consumer<MemoryInfo> onMemoryUpdate;
     private Consumer<ProcessInfo> onProcessUpdate;
+    private Consumer<ProcessListInfo> onProcessListUpdate;
     private Consumer<String> onError;
 
     public MonitoringService(ConnectionProvider connectionProvider) {
@@ -88,6 +92,7 @@ public class MonitoringService {
     private void collectData() {
         collectCpu();
         collectMemory();
+        collectProcessList();
         collectProcess();
     }
 
@@ -136,6 +141,19 @@ public class MonitoringService {
         }
     }
 
+    private void collectProcessList() {
+        try {
+            String output = connectionProvider.executeCommand("ps -eo pid,comm --no-headers");
+            ProcessListInfo listInfo = processListParser.parse(output);
+            if (listInfo != null && onProcessListUpdate != null) {
+                onProcessListUpdate.accept(listInfo);
+            }
+        } catch (Exception e) {
+            log.error("Process list collection failed", e);
+            notifyError("Process list collection failed: " + e.getMessage());
+        }
+    }
+
     private void notifyError(String message) {
         if (onError != null) {
             onError.accept(message);
@@ -168,6 +186,10 @@ public class MonitoringService {
 
     public void setOnProcessUpdate(Consumer<ProcessInfo> onProcessUpdate) {
         this.onProcessUpdate = onProcessUpdate;
+    }
+
+    public void setOnProcessListUpdate(Consumer<ProcessListInfo> onProcessListUpdate) {
+        this.onProcessListUpdate = onProcessListUpdate;
     }
 
     public void setOnError(Consumer<String> onError) {
