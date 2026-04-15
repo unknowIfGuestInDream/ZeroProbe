@@ -17,9 +17,12 @@
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -289,6 +292,59 @@
                     <TitledPane text="%environment.envVars" animated="false" VBox.vgrow="ALWAYS">
                         <TableView fx:id="envVarsTable"/>
                     </TitledPane>
+                </VBox>
+            </Tab>
+
+            <!-- File Browser Tab -->
+            <Tab text="%tab.fileBrowser" closable="false">
+                <VBox spacing="0">
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <padding>
+                            <Insets top="10" right="10" bottom="5" left="10"/>
+                        </padding>
+                        <Button fx:id="fileBrowserRefreshButton" text="%fileBrowser.refresh" onAction="#onRefreshFileBrowser"/>
+                        <CheckBox fx:id="fileBrowserAutoRefreshCheck" text="%fileBrowser.autoRefresh"/>
+                        <Label fx:id="fileBrowserStatusLabel" text="%fileBrowser.notConnected"/>
+                    </HBox>
+                    <SplitPane fx:id="fileBrowserSplitPane" dividerPositions="0.3" VBox.vgrow="ALWAYS">
+                        <TreeView fx:id="fileBrowserTreeView"/>
+                        <VBox spacing="10">
+                            <padding>
+                                <Insets top="10" right="10" bottom="10" left="10"/>
+                            </padding>
+                            <Label fx:id="fileBrowserDetailHintLabel" text="%fileBrowser.selectToView"/>
+                            <GridPane fx:id="fileBrowserDetailsGrid" hgap="10" vgap="8" visible="false" managed="false">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="120" prefWidth="150"/>
+                                    <ColumnConstraints hgrow="ALWAYS" prefWidth="400"/>
+                                </columnConstraints>
+                                <Label text="%fileBrowser.name" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <Label fx:id="fileBrowserNameLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                <Label text="%fileBrowser.path" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                <Label fx:id="fileBrowserPathLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <Label text="%fileBrowser.type" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                                <Label fx:id="fileBrowserTypeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                <Label text="%fileBrowser.size" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                                <Label fx:id="fileBrowserSizeLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                <Label text="%fileBrowser.permissions" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                                <Label fx:id="fileBrowserPermissionsLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                <Label text="%fileBrowser.owner" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                                <Label fx:id="fileBrowserOwnerLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                                <Label text="%fileBrowser.group" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+                                <Label fx:id="fileBrowserGroupLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+                                <Label text="%fileBrowser.lastModified" style="-fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+                                <Label fx:id="fileBrowserLastModifiedLabel" text="-" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+                            </GridPane>
+                            <HBox fx:id="fileBrowserContentButtonBox" spacing="10" visible="false" managed="false">
+                                <Button fx:id="fileBrowserViewContentButton" text="%fileBrowser.viewContent" onAction="#onViewFileContent"/>
+                            </HBox>
+                            <TitledPane fx:id="fileBrowserContentPane" text="%fileBrowser.fileContent" animated="false"
+                                        visible="false" managed="false" VBox.vgrow="ALWAYS">
+                                <TextArea fx:id="fileBrowserContentArea" editable="false" wrapText="true"
+                                          style="-fx-font-family: monospace;"/>
+                            </TitledPane>
+                        </VBox>
+                    </SplitPane>
                 </VBox>
             </Tab>
 
