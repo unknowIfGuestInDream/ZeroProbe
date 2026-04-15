@@ -40,6 +40,7 @@ public class ProcessParser {
         String[] fields = afterComm.split("\\s+");
 
         // fields[0] = state (field 3 in original)
+        // fields[1] = ppid (field 4 in original)
         // fields[11] = utime (field 14 in original)
         // fields[12] = stime (field 15 in original)
         if (fields.length < 13) {
@@ -48,6 +49,7 @@ public class ProcessParser {
         }
 
         String state = fields[0];
+        int ppid = parseIntSafe(fields[1], 0);
         long utime;
         long stime;
         try {
@@ -58,9 +60,14 @@ public class ProcessParser {
             return null;
         }
 
-        // Parse /proc/[pid]/status for Threads and VmRSS
+        // Parse /proc/[pid]/status for additional fields
         int threads = 1;
         long vmRssKb = 0;
+        long vmSizeKb = 0;
+        long vmPeakKb = 0;
+        int uid = -1;
+        long voluntaryCtxtSwitches = 0;
+        long nonvoluntaryCtxtSwitches = 0;
 
         if (procStatusOutput != null && !procStatusOutput.isBlank()) {
             for (String sLine : procStatusOutput.split("\n")) {
@@ -69,12 +76,23 @@ public class ProcessParser {
                     threads = parseIntField(trimmed, threads);
                 } else if (trimmed.startsWith("VmRSS:")) {
                     vmRssKb = parseLongField(trimmed, vmRssKb);
+                } else if (trimmed.startsWith("VmSize:")) {
+                    vmSizeKb = parseLongField(trimmed, vmSizeKb);
+                } else if (trimmed.startsWith("VmPeak:")) {
+                    vmPeakKb = parseLongField(trimmed, vmPeakKb);
+                } else if (trimmed.startsWith("Uid:")) {
+                    uid = parseIntField(trimmed, uid);
+                } else if (trimmed.startsWith("voluntary_ctxt_switches:")) {
+                    voluntaryCtxtSwitches = parseLongField(trimmed, voluntaryCtxtSwitches);
+                } else if (trimmed.startsWith("nonvoluntary_ctxt_switches:")) {
+                    nonvoluntaryCtxtSwitches = parseLongField(trimmed, nonvoluntaryCtxtSwitches);
                 }
             }
         }
 
         return new ProcessInfo(System.currentTimeMillis(), pid, name, state,
-            threads, vmRssKb, utime, stime);
+            ppid, uid, threads, vmRssKb, vmSizeKb, vmPeakKb, utime, stime,
+            voluntaryCtxtSwitches, nonvoluntaryCtxtSwitches);
     }
 
     private int parseIntField(String line, int defaultValue) {
@@ -99,5 +117,13 @@ public class ProcessParser {
             }
         }
         return defaultValue;
+    }
+
+    private int parseIntSafe(String value, int defaultValue) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 }

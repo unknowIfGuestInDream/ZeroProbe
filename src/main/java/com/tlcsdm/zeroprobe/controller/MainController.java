@@ -4,7 +4,6 @@ import com.tlcsdm.zeroprobe.ZeroProbeApplication;
 import com.tlcsdm.zeroprobe.config.AppSettings;
 import com.tlcsdm.zeroprobe.config.I18N;
 import com.tlcsdm.zeroprobe.config.UserPreferences;
-import com.tlcsdm.zeroprobe.export.CsvDataExporter;
 import com.tlcsdm.zeroprobe.export.DataExporter;
 import com.fazecast.jSerialComm.SerialPort;
 import com.tlcsdm.zeroprobe.model.ConnectionConfig;
@@ -55,14 +54,12 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.StringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.List;
@@ -132,8 +129,6 @@ public class MainController {
     @FXML
     private Button connectButton;
     @FXML
-    private Button disconnectButton;
-    @FXML
     private Label connectionStatusLabel;
 
     // Monitor tab
@@ -189,18 +184,18 @@ public class MainController {
     private Label processVmRssLabel;
     @FXML
     private Label processCpuTimeLabel;
-
-    // Recording tab
     @FXML
-    private TextField recordingPathField;
+    private Label processPpidLabel;
     @FXML
-    private Button startRecordingButton;
+    private Label processUidLabel;
     @FXML
-    private Button stopRecordingButton;
+    private Label processVmSizeLabel;
     @FXML
-    private Label recordingStatusLabel;
+    private Label processVmPeakLabel;
     @FXML
-    private Label sampleCountLabel;
+    private Label processVoluntaryLabel;
+    @FXML
+    private Label processNonvoluntaryLabel;
 
     // Environment tab
     @FXML
@@ -528,8 +523,31 @@ public class MainController {
 
     // ---- Connection handling ----
 
+    private static final String POWER_ICON = "\u23FB  ";
+    private static final String STOP_ICON = "\u23F9  ";
+    private static final String FOLDER_ICON = "\uD83D\uDCC1";
+    private static final String FILE_ICON = "\uD83D\uDCC4";
+
+    private void updateConnectButtonState() {
+        if (connected) {
+            connectButton.setText(STOP_ICON + I18N.get("connection.disconnect"));
+            connectButton.setStyle("-fx-font-size: 14; -fx-text-fill: -color-danger-fg;");
+        } else {
+            connectButton.setText(POWER_ICON + I18N.get("connection.connect"));
+            connectButton.setStyle("-fx-font-size: 14;");
+        }
+    }
+
     @FXML
-    public void onConnect() {
+    public void onToggleConnection() {
+        if (connected) {
+            onDisconnect();
+        } else {
+            onConnect();
+        }
+    }
+
+    private void onConnect() {
         try {
             ConnectionConfig config = buildConnectionConfig();
             if (sshRadio.isSelected()) {
@@ -546,8 +564,8 @@ public class MainController {
                     connectionProvider.connect(config);
                     Platform.runLater(() -> {
                         connected = true;
-                        connectButton.setDisable(true);
-                        disconnectButton.setDisable(false);
+                        connectButton.setDisable(false);
+                        updateConnectButtonState();
                         connectionStatusLabel.setText(
                             MessageFormat.format(I18N.get("connection.status.connected"), config.toString()));
                         statusLabel.setText(I18N.get("status.connected"));
@@ -573,8 +591,7 @@ public class MainController {
         }
     }
 
-    @FXML
-    public void onDisconnect() {
+    private void onDisconnect() {
         stopMonitoring();
         if (connectionProvider != null) {
             connectionProvider.disconnect();
@@ -582,7 +599,7 @@ public class MainController {
         }
         connected = false;
         connectButton.setDisable(false);
-        disconnectButton.setDisable(true);
+        updateConnectButtonState();
         connectionStatusLabel.setText(I18N.get("connection.status.disconnected"));
         statusLabel.setText(I18N.get("status.disconnected"));
         clearEnvironmentTab();
@@ -664,22 +681,24 @@ public class MainController {
             processPidLabel.setText(String.valueOf(procInfo.getPid()));
             processNameLabel.setText(procInfo.getName());
             processStateLabel.setText(procInfo.getState());
+            processPpidLabel.setText(String.valueOf(procInfo.getPpid()));
+            processUidLabel.setText(String.valueOf(procInfo.getUid()));
             processThreadsLabel.setText(String.valueOf(procInfo.getThreads()));
             processVmRssLabel.setText(String.valueOf(procInfo.getVmRssKb()));
+            processVmSizeLabel.setText(String.valueOf(procInfo.getVmSizeKb()));
+            processVmPeakLabel.setText(String.valueOf(procInfo.getVmPeakKb()));
             processCpuTimeLabel.setText(procInfo.getUtime() + " / " + procInfo.getStime());
+            processVoluntaryLabel.setText(String.valueOf(procInfo.getVoluntaryCtxtSwitches()));
+            processNonvoluntaryLabel.setText(String.valueOf(procInfo.getNonvoluntaryCtxtSwitches()));
         });
         exportProcessIfRecording(procInfo);
     }
 
     private void handleProcessListUpdate(ProcessListInfo listInfo) {
         int index = processCountDataIndex++;
-        Platform.runLater(() -> {
-            // Update process count chart
-            processCountSeries.getData().add(new XYChart.Data<>(index, listInfo.getProcessCount()));
-            trimProcessChartData(processCountSeries);
-            updateTimeAxis(processCountTimeAxis, index, processMaxDataPoints);
 
-            // Update process list, preserving selection
+        // Update process list first (separate from chart update for responsiveness)
+        Platform.runLater(() -> {
             ProcessEntry selected = processListView.getSelectionModel().getSelectedItem();
             processListSource.setAll(listInfo.getProcesses());
             if (selected != null) {
@@ -690,6 +709,13 @@ public class MainController {
                     }
                 }
             }
+        });
+
+        // Update chart data separately to avoid blocking list/detail refresh
+        Platform.runLater(() -> {
+            processCountSeries.getData().add(new XYChart.Data<>(index, listInfo.getProcessCount()));
+            trimProcessChartData(processCountSeries);
+            updateTimeAxis(processCountTimeAxis, index, processMaxDataPoints);
         });
     }
 
@@ -811,7 +837,15 @@ public class MainController {
             @Override
             protected void updateItem(FileEntry item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.getName());
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    setText(item.getName());
+                    Label icon = new Label(item.isDirectory() ? FOLDER_ICON : FILE_ICON);
+                    icon.setStyle("-fx-font-size: 14;");
+                    setGraphic(icon);
+                }
             }
         });
 
@@ -836,7 +870,7 @@ public class MainController {
 
         Thread thread = new Thread(() -> {
             try {
-                String output = connectionProvider.executeCommand("ls -la /");
+                String output = connectionProvider.executeCommand("ls -la --time-style='+%Y-%m-%d %H:%M:%S' /");
                 List<FileEntry> entries = fileSystemParser.parseLsOutput(output, "/");
 
                 Platform.runLater(() -> {
@@ -888,7 +922,7 @@ public class MainController {
         Thread thread = new Thread(() -> {
             try {
                 String safePath = parentEntry.getPath().replace("'", "'\\''");
-                String output = connectionProvider.executeCommand("ls -la '" + safePath + "'");
+                String output = connectionProvider.executeCommand("ls -la --time-style='+%Y-%m-%d %H:%M:%S' '" + safePath + "'");
                 List<FileEntry> entries = fileSystemParser.parseLsOutput(output, parentEntry.getPath());
 
                 Platform.runLater(() -> {
@@ -919,7 +953,7 @@ public class MainController {
             ? I18N.get("fileBrowser.type.directory")
             : I18N.get("fileBrowser.type.file"));
         fileBrowserSizeLabel.setText(entry.getFormattedSize());
-        fileBrowserPermissionsLabel.setText(entry.getPermissions());
+        fileBrowserPermissionsLabel.setText(normalizePermissions(entry.getPermissions()));
         fileBrowserOwnerLabel.setText(entry.getOwner());
         fileBrowserGroupLabel.setText(entry.getGroup());
         fileBrowserLastModifiedLabel.setText(entry.getLastModified());
@@ -1086,68 +1120,13 @@ public class MainController {
         terminalStatusLabel.setText(I18N.get("terminal.notConnected"));
     }
 
-    // ---- Recording ----
-
-    @FXML
-    public void onBrowsePath() {
-        DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle(I18N.get("recording.saveTo"));
-        File dir = chooser.showDialog(primaryStage);
-        if (dir != null) {
-            recordingPathField.setText(dir.getAbsolutePath());
-        }
-    }
-
-    @FXML
-    public void onStartRecording() {
-        String path = recordingPathField.getText().trim();
-        if (path.isEmpty()) {
-            showErrorDialog(I18N.get("dialog.error.title"), "Please specify a save path.");
-            return;
-        }
-
-        try {
-            dataExporter = new CsvDataExporter();
-            dataExporter.open(path);
-            recording = true;
-            sampleCount.set(0);
-            startRecordingButton.setDisable(true);
-            stopRecordingButton.setDisable(false);
-            recordingStatusLabel.setText(I18N.get("recording.status.recording"));
-            sampleCountLabel.setText(MessageFormat.format(I18N.get("recording.samples"), 0));
-            statusLabel.setText(MessageFormat.format(I18N.get("recording.started"), path));
-        } catch (Exception e) {
-            LOG.error("Failed to start recording", e);
-            showErrorDialog(I18N.get("dialog.error.title"), e.getMessage());
-        }
-    }
-
-    @FXML
-    public void onStopRecording() {
-        recording = false;
-        if (dataExporter != null) {
-            try {
-                dataExporter.flush();
-                dataExporter.close();
-            } catch (Exception e) {
-                LOG.error("Error closing exporter", e);
-            }
-            dataExporter = null;
-        }
-        startRecordingButton.setDisable(false);
-        stopRecordingButton.setDisable(true);
-        recordingStatusLabel.setText(I18N.get("recording.status.idle"));
-        int count = sampleCount.get();
-        statusLabel.setText(MessageFormat.format(I18N.get("recording.stopped"), count));
-    }
+    // ---- Recording (kept for future use) ----
 
     private void exportCpuIfRecording(CpuInfo cpuInfo) {
         if (recording && dataExporter != null && dataExporter.isOpen()) {
             try {
                 dataExporter.exportCpuInfo(cpuInfo);
-                int count = sampleCount.incrementAndGet();
-                Platform.runLater(() ->
-                    sampleCountLabel.setText(MessageFormat.format(I18N.get("recording.samples"), count)));
+                sampleCount.incrementAndGet();
             } catch (Exception e) {
                 LOG.error("Failed to export CPU data", e);
             }
@@ -1400,5 +1379,40 @@ public class MainController {
         if (primaryStage != null) {
             alert.initOwner(primaryStage);
         }
+    }
+
+    /**
+     * Normalize a permission string to standard 10-character rwx format with dashes.
+     * Expects input from {@code ls -la} output (e.g., "drwxr-xr-x", "-rw-r--r--").
+     * If the string is already 10 characters, it's returned as-is.
+     * Shorter strings are padded assuming missing characters represent absent permissions.
+     */
+    private String normalizePermissions(String permissions) {
+        if (permissions == null || permissions.isEmpty()) {
+            return "-";
+        }
+        if (permissions.length() >= 10) {
+            return permissions;
+        }
+        // If shorter than expected, pad positions with dashes
+        if (permissions.length() < 10) {
+            StringBuilder sb = new StringBuilder();
+            char type = permissions.charAt(0);
+            sb.append(type);
+            String perms = permissions.substring(1);
+            // Expected positions: rwxrwxrwx (9 chars)
+            String expected = "rwxrwxrwx";
+            int j = 0;
+            for (int i = 0; i < 9; i++) {
+                if (j < perms.length() && perms.charAt(j) == expected.charAt(i)) {
+                    sb.append(perms.charAt(j));
+                    j++;
+                } else {
+                    sb.append('-');
+                }
+            }
+            return sb.toString();
+        }
+        return permissions;
     }
 }
