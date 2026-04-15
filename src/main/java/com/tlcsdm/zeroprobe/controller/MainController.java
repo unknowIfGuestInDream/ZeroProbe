@@ -3,8 +3,10 @@ package com.tlcsdm.zeroprobe.controller;
 import com.tlcsdm.zeroprobe.ZeroProbeApplication;
 import com.tlcsdm.zeroprobe.config.AppSettings;
 import com.tlcsdm.zeroprobe.config.I18N;
+import com.tlcsdm.zeroprobe.config.UserPreferences;
 import com.tlcsdm.zeroprobe.export.CsvDataExporter;
 import com.tlcsdm.zeroprobe.export.DataExporter;
+import com.fazecast.jSerialComm.SerialPort;
 import com.tlcsdm.zeroprobe.model.ConnectionConfig;
 import com.tlcsdm.zeroprobe.model.CpuInfo;
 import com.tlcsdm.zeroprobe.model.MemoryInfo;
@@ -40,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.text.MessageFormat;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -187,10 +190,15 @@ public class MainController {
             "9600", "19200", "38400", "57600", "115200"));
         baudRateCombo.setValue("115200");
 
-        // Populate serial port combo with placeholder
-        serialPortCombo.setItems(FXCollections.observableArrayList(
-            "/dev/ttyUSB0", "/dev/ttyACM0", "/dev/ttyS0", "COM1", "COM3"));
+        // Populate serial port combo
+        refreshSerialPorts();
+        serialPortCombo.showingProperty().addListener((obs, wasShowing, isShowing) -> {
+            if (isShowing) {
+                refreshSerialPorts();
+            }
+        });
         serialPortCombo.setEditable(true);
+        loadSavedConnectionSettings();
 
         // Initialize charts
         cpuSeries = new XYChart.Series<>();
@@ -672,6 +680,7 @@ public class MainController {
      */
     public void shutdown() {
         LOG.info("Application shutting down");
+        saveConnectionSettings();
         stopMonitoring();
         if (connectionProvider != null) {
             connectionProvider.disconnect();
@@ -690,6 +699,59 @@ public class MainController {
     private void closePrimaryStage() {
         if (primaryStage != null) {
             primaryStage.close();
+        }
+    }
+
+    private void loadSavedConnectionSettings() {
+        UserPreferences.ConnectionState state = UserPreferences.loadConnectionState();
+        hostField.setText(state.host());
+        portField.setText(String.valueOf(state.port()));
+        usernameField.setText(state.username());
+        passwordField.setText(state.password());
+        serialPortCombo.setValue(state.serialPort());
+        baudRateCombo.setValue(String.valueOf(state.baudRate()));
+        if (state.type() == ConnectionConfig.ConnectionType.SERIAL) {
+            serialRadio.setSelected(true);
+        } else {
+            sshRadio.setSelected(true);
+        }
+    }
+
+    private void saveConnectionSettings() {
+        UserPreferences.saveConnectionState(new UserPreferences.ConnectionState(
+            sshRadio.isSelected() ? ConnectionConfig.ConnectionType.SSH : ConnectionConfig.ConnectionType.SERIAL,
+            hostField.getText(),
+            parseIntOrDefault(portField.getText(), 22),
+            usernameField.getText(),
+            passwordField.getText(),
+            serialPortCombo.getValue(),
+            parseIntOrDefault(baudRateCombo.getValue(), 115200)
+        ));
+    }
+
+    private int parseIntOrDefault(String value, int defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private void refreshSerialPorts() {
+        String currentValue = serialPortCombo.getValue();
+        var ports = Arrays.stream(SerialPort.getCommPorts())
+            .map(SerialPort::getSystemPortName)
+            .filter(name -> name != null && !name.isBlank())
+            .distinct()
+            .toList();
+        serialPortCombo.setItems(FXCollections.observableArrayList(ports));
+        if (currentValue != null && !currentValue.isBlank()) {
+            serialPortCombo.setValue(currentValue);
+        } else if (!ports.isEmpty()) {
+            serialPortCombo.setValue(ports.getFirst());
         }
     }
 
