@@ -137,8 +137,7 @@
 
                     <!-- Connect / Disconnect button -->
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Button fx:id="connectButton" text="⏻  %connection.connect" onAction="#onToggleConnection"
-                                style="-fx-font-size: 14;"/>
+                        <Button fx:id="connectButton" text="%connection.connect" onAction="#onToggleConnection"/>
                     </HBox>
 
                     <!-- Connection status -->
