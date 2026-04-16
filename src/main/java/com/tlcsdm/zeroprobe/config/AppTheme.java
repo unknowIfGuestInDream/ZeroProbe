@@ -63,6 +63,16 @@ public enum AppTheme {
     }
 
     /**
+     * Check if this theme is a dark theme.
+     */
+    public boolean isDark() {
+        return this == ATLANTAFX_PRIMER_DARK
+            || this == ATLANTAFX_NORD_DARK
+            || this == ATLANTAFX_CUPERTINO_DARK
+            || this == ATLANTAFX_DRACULA;
+    }
+
+    /**
      * Get the saved theme from preferences.
      * Default is ATLANTAFX_PRIMER_LIGHT.
      */

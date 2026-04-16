@@ -155,31 +155,19 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="%monitor.timeRange" style="-fx-font-weight: bold;"/>
-                        <ComboBox fx:id="timeRangeCombo"/>
-                    </HBox>
-                    <HBox spacing="10" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                        <LineChart fx:id="cpuChart" title="%monitor.cpuChart" HBox.hgrow="ALWAYS" prefHeight="400">
-                            <xAxis>
-                                <NumberAxis fx:id="cpuTimeAxis" label="%monitor.timeAxis" autoRanging="false" lowerBound="0" upperBound="60" tickUnit="10"/>
-                            </xAxis>
-                            <yAxis>
-                                <NumberAxis fx:id="cpuUsageAxis" label="%monitor.usageAxis" lowerBound="0" upperBound="100" autoRanging="false"/>
-                            </yAxis>
-                        </LineChart>
-                        <LineChart fx:id="memoryChart" title="%monitor.memoryChart" HBox.hgrow="ALWAYS" prefHeight="400">
-                            <xAxis>
-                                <NumberAxis fx:id="memoryTimeAxis" label="%monitor.timeAxis" autoRanging="false" lowerBound="0" upperBound="60" tickUnit="10"/>
-                            </xAxis>
-                            <yAxis>
-                                <NumberAxis fx:id="memoryUsageAxis" label="%monitor.usageAxis" lowerBound="0" upperBound="100" autoRanging="false"/>
-                            </yAxis>
-                        </LineChart>
-                    </HBox>
-                    <HBox spacing="30" alignment="CENTER_LEFT">
-                        <Label fx:id="currentCpuLabel" text="%monitor.noData"/>
-                        <Label fx:id="currentMemoryLabel" text="%monitor.noData"/>
+                    <HBox spacing="20" alignment="CENTER" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                        <VBox alignment="CENTER" spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="%monitor.cpuChart" style="-fx-font-weight: bold; -fx-font-size: 14;"/>
+                            <HBox fx:id="cpuGaugeContainer" alignment="CENTER" prefHeight="300"/>
+                            <Label fx:id="currentCpuLabel" text="%monitor.noData"/>
+                            <Label fx:id="maxCpuLabel" text=""/>
+                        </VBox>
+                        <VBox alignment="CENTER" spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="%monitor.memoryChart" style="-fx-font-weight: bold; -fx-font-size: 14;"/>
+                            <HBox fx:id="memoryGaugeContainer" alignment="CENTER" prefHeight="300"/>
+                            <Label fx:id="currentMemoryLabel" text="%monitor.noData"/>
+                            <Label fx:id="maxMemoryLabel" text=""/>
+                        </VBox>
                     </HBox>
                 </VBox>
             </Tab>
