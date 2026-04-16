@@ -278,7 +278,7 @@ public class MainController {
     private static final String TITLE_BUTTON_HOVER_STYLE = "-fx-background-color: -color-bg-default;";
     private static final String TITLE_BUTTON_CLOSE_HOVER_STYLE =
         "-fx-background-color: -color-danger-emphasis; -fx-text-fill: -color-fg-emphasis;";
-    private static final String CONNECT_BUTTON_BASE_STYLE = "-fx-font-size: 16; -fx-padding: 8 18;";
+    private static final String CONNECT_BUTTON_BASE_STYLE = "-fx-font-size: 16; -fx-padding: 8 18";
     private static final String CONNECT_BUTTON_DANGER_STYLE = CONNECT_BUTTON_BASE_STYLE + "; -fx-text-fill: -color-danger-fg;";
     private static final double RESIZE_MARGIN = 5;
 
