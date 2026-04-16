@@ -278,6 +278,8 @@ public class MainController {
     private static final String TITLE_BUTTON_HOVER_STYLE = "-fx-background-color: -color-bg-default;";
     private static final String TITLE_BUTTON_CLOSE_HOVER_STYLE =
         "-fx-background-color: -color-danger-emphasis; -fx-text-fill: -color-fg-emphasis;";
+    private static final String CONNECT_BUTTON_BASE_STYLE = "-fx-font-size: 16; -fx-padding: 8 18";
+    private static final String CONNECT_BUTTON_DANGER_STYLE = CONNECT_BUTTON_BASE_STYLE + "; -fx-text-fill: -color-danger-fg;";
     private static final double RESIZE_MARGIN = 5;
 
     private ConnectionProvider connectionProvider;
@@ -335,6 +337,7 @@ public class MainController {
         });
         serialPortCombo.setEditable(true);
         loadSavedConnectionSettings();
+        updateConnectButtonState();
 
         // Initialize gauges
         cpuGauge = createGauge(I18N.get("monitor.cpu"), "%");
@@ -518,10 +521,10 @@ public class MainController {
     private void updateConnectButtonState() {
         if (connected) {
             connectButton.setText(STOP_ICON + I18N.get("connection.disconnect"));
-            connectButton.setStyle("-fx-font-size: 14; -fx-text-fill: -color-danger-fg;");
+            connectButton.setStyle(CONNECT_BUTTON_DANGER_STYLE);
         } else {
             connectButton.setText(POWER_ICON + I18N.get("connection.connect"));
-            connectButton.setStyle("-fx-font-size: 14;");
+            connectButton.setStyle(CONNECT_BUTTON_BASE_STYLE);
         }
     }
 
