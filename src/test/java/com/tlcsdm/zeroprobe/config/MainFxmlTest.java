@@ -20,7 +20,7 @@ class MainFxmlTest {
             String content = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
             assertFalse(content.contains("⏻  %connection.connect"),
                 "connectButton should not concatenate icon text with i18n key in FXML");
-            Pattern pattern = Pattern.compile("<Button(?=[^>]*fx:id=\"connectButton\")(?=[^>]*text=\"%connection\\.connect\")[^>]*/?>");
+            Pattern pattern = Pattern.compile("fx:id=\"connectButton\"[^>]*text=\"%connection\\.connect\"");
             assertTrue(pattern.matcher(content).find(),
                 "connectButton should use i18n key directly");
         }
