@@ -10,6 +10,9 @@ module com.tlcsdm.zeroprobe {
     requires com.google.gson;
     requires eu.hansolo.medusa;
 
+    exports com.tlcsdm.zeroprobe.config to com.google.gson;
+
     opens com.tlcsdm.zeroprobe to javafx.graphics;
+    opens com.tlcsdm.zeroprobe.model to com.google.gson;
     opens com.tlcsdm.zeroprobe.controller to javafx.fxml;
 }
