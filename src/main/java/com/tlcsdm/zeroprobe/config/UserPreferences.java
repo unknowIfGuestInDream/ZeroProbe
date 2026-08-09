@@ -24,6 +24,8 @@ public final class UserPreferences {
     private static final String KEY_CONNECTION_SERIAL_PORT = "connection.serialPort";
     private static final String KEY_CONNECTION_BAUD_RATE = "connection.baudRate";
 
+    private static final String KEY_MONITORING_ENABLED = "monitoring.enabled";
+
     private UserPreferences() {
     }
 
@@ -79,5 +81,17 @@ public final class UserPreferences {
 
     public record ConnectionState(ConnectionConfig.ConnectionType type, String host, int port, String username,
                                   String serialPort, int baudRate) {
+    }
+
+    /**
+     * Load the monitoring-enabled preference. Defaults to {@code false} so that monitoring
+     * does not start automatically on connect and cannot impact the embedded device.
+     */
+    public static boolean loadMonitoringEnabled() {
+        return PREFS.getBoolean(KEY_MONITORING_ENABLED, false);
+    }
+
+    public static void saveMonitoringEnabled(boolean enabled) {
+        PREFS.putBoolean(KEY_MONITORING_ENABLED, enabled);
     }
 }

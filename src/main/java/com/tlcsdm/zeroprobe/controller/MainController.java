@@ -138,6 +138,8 @@ public class MainController {
 
     // Monitor tab
     @FXML
+    private Button toggleMonitoringButton;
+    @FXML
     private HBox cpuGaugeContainer;
     @FXML
     private HBox memoryGaugeContainer;
@@ -559,7 +561,10 @@ public class MainController {
                         connectionStatusLabel.setText(
                             MessageFormat.format(I18N.get("connection.status.connected"), config.toString()));
                         statusLabel.setText(I18N.get("status.connected"));
-                        startMonitoring();
+                        if (UserPreferences.loadMonitoringEnabled()) {
+                            startMonitoring();
+                            toggleMonitoringButton.setText(I18N.get("monitor.stopMonitoring"));
+                        }
                         onRefreshEnvironment();
                     });
                 } catch (Exception e) {
@@ -583,6 +588,7 @@ public class MainController {
 
     private void onDisconnect() {
         stopMonitoring();
+        toggleMonitoringButton.setText(I18N.get("monitor.startMonitoring"));
         if (connectionProvider != null) {
             connectionProvider.disconnect();
             connectionProvider = null;
@@ -615,9 +621,36 @@ public class MainController {
 
     // ---- Monitoring ----
 
+    @FXML
+    private void onToggleMonitoring() {
+        if (isMonitoringRunning()) {
+            stopMonitoring();
+            toggleMonitoringButton.setText(I18N.get("monitor.startMonitoring"));
+            statusLabel.setText(I18N.get("monitor.monitoringStopped"));
+            UserPreferences.saveMonitoringEnabled(false);
+        } else {
+            if (!connected) {
+                return;
+            }
+            startMonitoring();
+            toggleMonitoringButton.setText(I18N.get("monitor.stopMonitoring"));
+            statusLabel.setText(I18N.get("monitor.monitoringStarted"));
+            UserPreferences.saveMonitoringEnabled(true);
+        }
+    }
+
+    private boolean isMonitoringRunning() {
+        return monitoringService != null && monitoringService.isRunning();
+    }
+
     private void startMonitoring() {
         if (connectionProvider == null) {
             return;
+        }
+        // Shut down any previous service instance before creating a new one.
+        if (monitoringService != null) {
+            monitoringService.shutdown();
+            monitoringService = null;
         }
         cpuDataIndex = 0;
         memoryDataIndex = 0;

@@ -219,6 +219,10 @@ public class MonitoringService {
         cpuParser.reset();
     }
 
+    public boolean isRunning() {
+        return scheduler != null && !scheduler.isShutdown() && !stopping;
+    }
+
     public void setMonitoredPid(int pid) {
         this.monitoredPid = pid;
     }
