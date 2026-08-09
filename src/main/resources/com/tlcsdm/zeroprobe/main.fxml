@@ -154,6 +154,10 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="toggleMonitoringButton" text="%monitor.startMonitoring"
+                                onAction="#onToggleMonitoring"/>
+                    </HBox>
                     <HBox spacing="20" alignment="CENTER" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                         <VBox alignment="CENTER" spacing="5" HBox.hgrow="ALWAYS">
                             <Label text="%monitor.cpuChart" style="-fx-font-weight: bold; -fx-font-size: 14;"/>
